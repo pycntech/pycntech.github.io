@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, 机器学习">
+
+  <title>
+    PyCN技术评论
+&ndash; Python机器学习算法入门之简单感知器学习算法  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/Python机器学习算法入门之简单感知器学习算法.html">Python机器学习算法入门之简单感知器学习算法</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：ZZR</h4>
+<h2>问题背景</h2>
+<p>考虑一个问题：现在我们有一些过往核发信用卡的资料，包括用户个人信息和审核结果。根据这些资料，我们希望预测能不能给下一个用户发信用卡。用户基本信息如下：</p>
+<p><img alt="image_1b2cgp88n1esq1f1f1qee1vi8udf9.png-25.9kB" src="http://static.zybuluo.com/zzr0427/7tlh4x37i3zc2drlnbf4rn4d/image_1b2cgp88n1esq1f1f1qee1vi8udf9.png" /></p>
+<p>这些基本信息组成了一个向量$X={x_1, x_2, ..., x_d}$。不同的信息有不同的权重，设权重向量$W = {w_1, w_2, ..., w_d}$。我们希望构造一个函数来给用户的信用打分，并且，如果信用分超过了某个阈值，我们就认为这个客户是可靠的，可以给他发信用卡：</p>
+<ul>
+<li>能发：$\sum_{i=1}^{d}w_ix_i &gt; threshold$</li>
+<li>不能：$\sum_{i=1}^{d}w_ix_i &lt; threshold$</li>
+</ul>
+<p>通过阶跃函数$sign(x)$，进一步将这个过程函数化：</p>
+<p>$$y=sign((\sum_{i=1}^{d}w_ix_i)-threhold)$$</p>
+<p>所以，当$y=1$，通过；当$y=-1$，拒绝；当$y=0$，忽略。</p>
+<p>其中：
+$sign(x) = \begin{cases}
+ &amp; 1 \quad\text{ if } x&gt;0 \ 
+ &amp; 0 \quad\text{ if } x=0 \ 
+ &amp; -1\ \text{ if } x&lt;0 
+\end{cases}$</p>
+<p>整理该方程如下：
+<img alt="image_1b2cp47id110v10ds14ce1i939ol2a.png-61.9kB" src="http://static.zybuluo.com/zzr0427/jz34z8elrbz550iuk1nbv9ah/image_1b2cp47id110v10ds14ce1i939ol2a.png" /></p>
+<h2>具体到二维空间</h2>
+<p>简化上面的问题，假设用户只有两个属性，就可以用二维空间的一个点来表示一个用户。如下所示，蓝圈表示通过，红叉表示拒绝。注意到直线的两边，一边大于0，一边小于0，也就是一边都是蓝圈，一边都是红叉。所以现在的目标就是，找到一条直线$h(x)=w_0+w_1x_1+w_2x_2$，可以将已知的蓝圈和红叉完美区分开。</p>
+<p><img alt="image_1b2cp47id110v10ds14ce1i939ol2a.png-14.5kB" src="http://static.zybuluo.com/zzr0427/qndkkb7sr1seqcy65trytpj8/image_1b2cp47id110v10ds14ce1i939ol2a.png" /></p>
+<h3>基础知识回顾</h3>
+<p>简单回顾一下线性代数的知识。一条直线可以由一个点 $M_0=(x_0, y_0)$和法向量 $\vec{n}=(A, B)$唯一确定。其点法式方程为：$A(x-x_0)+B(y-y_0)=0$。相应地，其方向向量为：$\vec{v}=(B, -A)$</p>
+<h3>感知机学习算法</h3>
+<p><img alt="image_1b2cp47id110v10ds14ce1i939ol2a.jpg-123.6kB" src="http://static.zybuluo.com/zzr0427/ztwq0bhpglmzuijqo1q66cp0/image_1b2cp47id110v10ds14ce1i939ol2a.jpg" /></p>
+<p>简单感知机算法（Perceptron Learning Algorithm，PLA）的思路很简单，首先随便找一条直线，然后遍历每一个已知点，如果正确，则跳过；如果错误，则利用这个点的信息对直线进行修正。修正的思路如上图所示：$W$是直线$h(x)$的法向量。$X$是错误点的方向向量，$y$是真实值。具体情况可分为如下两种情况：</p>
+<p>情况一：$y=+1$</p>
+<p><img alt="![image_1b2dorjqu1kis17q1eacq0612cd11.png-124.4kB](http://static.zybuluo.com/zzr0427/pgkf5sx4uie3bqregbohjifr/image_1b2dorjqu1kis17q1eacq0612cd11.png)" src="http://static.zybuluo.com/zzr0427/96htsebxao59sd2fh47dybdo/image_1b2kdgvf21qi2ai91a1v145k14t13f.png" /></p>
+<p>为了将这个出错的点包括进紫色区域，$W$应该靠近$X$方向。因此，$W(t+1)=W(t)+X$。</p>
+<p>情况二：$y=-1$</p>
+<p><img alt="image_1b2kdiljh192816sl2t61411feg3s.png-54.7kB" src="http://static.zybuluo.com/zzr0427/gf3giaexikubhzaz7k4kml5y/image_1b2kdiljh192816sl2t61411feg3s.png" /></p>
+<p>为了将这个出错的点排除出紫色区域，$W$应该远离$X$方向。因此，$W(t+1)=W(t)-X$。</p>
+<p>综上，得到修正函数：$$W_{t+1}=W_t+y_nX_n$$</p>
+<h3>证明：PLA校正的正确性</h3>
+<p>那么为什么感知机算法可以逐步接近正确呢？</p>
+<p>已知$W_{t+1}=W_t+y_nX_n$</p>
+<p>两边同时乘上$y_n$和$X_n$，得：$y_nW_{t+1}^TX_n=y_nW_t^TX_n+(y_n)^2X_n^TX_n$</p>
+<p>因为$(y_n)^2X_n^TX_n\geq0$，所以：$y_nW_{t+1}^TX_n\geq y_nW_t^TX_n$</p>
+<p>注意到$W_t^TX_n$恰好就是我们给出的当前用户的分数。当$y_n&gt;0$，也就是我们打分打低了，修正后分数上升；当$y_n&lt;0$，也就是我们打分打高了，修正后分数下降。这个结论说明，对于$X_n$这组错误数据，经过修正以后，我们打出的分数更靠近正确结果了。</p>
+<h3>证明：PLA终止的充分条件</h3>
+<p>从算法的规则上可以看出，PLA终止的必要条件是数据集中确定存在一条直线，可以将蓝圈和红叉分开，也就是线性可分：
+<img alt="image_1b2kel3411lk0mp63u51fdqpi249.png-54.3kB" src="http://static.zybuluo.com/zzr0427/34zqv5af0dfinbf1wwxzjz31/image_1b2kel3411lk0mp63u51fdqpi249.png" /></p>
+<p>现在证明，线性可分是PLA终止的充分条件。</p>
+<p>（1） 设$X_t$表示第$t$次更新时的点，一共更新了n次。若线性可分，则必然存在一条完美的直线$W_f$，使得对$\forall 1\leq t\leq n$，有$y_tW_f^TX_t&gt;0$。也就是：
+$$y_tW_f^TX_t\geq \min \limits_{1\leq t\leq n}y_tW_f^TX_t&gt;0$$</p>
+<p>（$W_f\cdot W_t$为向量内积，也就是$W_f^TW_t$）又由$W_t$的更新规则得：
+$$W_f\cdot W_t=W_f\cdot(W_{t-1}+y_tX_{t-1})=W_f\cdot W_{t-1}+y_tW_f\cdot X_{t-1}\geq W_f\cdot W_{t-1}+\min \limits_{1\leq k\leq n}y_kW_f\cdot X_k$$
+因此：
+$$\begin{matrix}
+W_f\cdot W_{t} &amp; \geq &amp; W_f\cdot W_{t-1} &amp; + &amp; \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k\ 
+W_f\cdot W_{t-1} &amp; \geq &amp; W_f\cdot W_{t-2} &amp; + &amp; \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k\ 
+\cdots &amp;  &amp; \cdots &amp;  &amp; \cdots \
+W_f\cdot W_1 &amp; \geq &amp; W_f\cdot W_0 &amp; + &amp; \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k
+\end{matrix}$$
+综上，得到：
+$$W_f\cdot W_t\geq W_f\cdot W_0+t\times \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k$$
+初始时$W_0=0$，所以：
+$$W_f\cdot W_t\geq t\times \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k$$</p>
+<p>（2） 因为每次遇到错误的数据才会更新，也就是$sign(W_t^TX_t)\neq y_t$，也就是$y_tW_t^TX_t\leq0$。其中$W_t$是第t次更新时的权重值。因此：
+<img alt="![aaaaaaa](http://static.zybuluo.com/zzr0427/44zmnv25vj53ospjfjche766/image_1b2kp9qmad4n98d120dl1l1khj4m.png)" src="http://static.zybuluo.com/zzr0427/lzd9s0c1z93dkw614gnfkre6/image_1b2kpb26418etikn10r9120ggbl53.png" /></p>
+<p>类似于（1），得到：
+$$\left \| W_t \right \|^2\leq t\times\max \limits_{1\leq k\leq n}{\left \| X_k \right \|}^2$$</p>
+<p>（3） 综上，得：
+$$\frac{W_f}{\left \| W_f \right \|}\cdot\frac{W_t}{\left \| W_t \right \|} \geq
+\frac{t\times \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k}{{\left \| W_f \right \|}{\left \| W_t \right \|}} \geq \frac{t\times \min \limits_{1\leq k\leq n}y_kW_f\cdot X_k}{\left \| W_f \right \|\sqrt{t}\max \limits_{1\leq k\leq n}{\left \| X_k \right \|}}
+=\sqrt{t}\times\frac{\min \limits_{1\leq k\leq n}y_kW_f\cdot X_k}{\left \| W_f \right \|\times\max \limits_{1\leq k\leq n}{\left \| X_k \right \|}}$$</p>
+<p>$A=\frac{\min \limits_{1\leq k\leq n}y_kW_f\cdot X_k}{\left \| W_f \right \|\times\max \limits_{1\leq k\leq n}{\left \| X_k \right \|}}$是一个常数，因此，随着$t$的增大，$\frac{W_f}{\left \| W_f \right \|}\cdot\frac{W_t}{\left \| W_t \right \|}$也逐步增大，也就是向量$W_f$和$W_t$的夹角逐渐减小，$W_t$逐渐接近$W_f$。
+又因为：$cos\theta = \frac{W_f}{\left \| W_f \right \|}\cdot\frac{W_t}{\left \| W_t \right \|} \leq 1$，所以$t\leq\frac{1}{A^2}$。因此，PLA算法必然收敛。</p>
+<h2>Linear Pocket Algorithm</h2>
+<p>上述PLA算法的前提是数据集线性可分。但是很明显，在分类之前我们不可能知道我们手里的数据是不是线性可分的。更何况，数据集可能有噪声（noise），这些噪声是之前的经验中错误的分类结果，这些噪声将导致PLA无法收敛。因此，我们的目标就从找到一条完美划分数据集的$W_f$，变成了找到一条最接近完美$W_g$，使得错误的点最少。这个转变使得我们可以<strong>处理非线性可分的数据集</strong>：
+<img alt="image_1b2ksqab461e7ilj9dvtd11fu5g.png-56.3kB" src="http://static.zybuluo.com/zzr0427/h8bhpuxolsgyevhgc0rjw6tp/image_1b2ksqab461e7ilj9dvtd11fu5g.png" />
+但是很遗憾的是，寻找$W_g$是一个NP-hard问题。</p>
+<p>因此问题又从“寻找最接近完美的$W_g$”变成了“寻找尽可能完美的$W_g$”。Pocket Algorithm是PLA的变形，用于处理此类问题。算法如下：
+<img alt="image_1b2kt4dff1oevsqe7d81jf9e265t.png-167.4kB" src="http://static.zybuluo.com/zzr0427/ml68vrda83g7c6pt30itzw2y/image_1b2kt4dff1oevsqe7d81jf9e265t.png" /></p>
+<p>与简单PLA不同的是：</p>
+<ul>
+<li>Pocket Algorithm事先设定迭代次数，而不是等算法自己收敛；</li>
+<li>随机遍历数据集，而不是循环遍历；</li>
+<li>遇到错误点校正$W_t$时，只有当新得到的$W_{t+1}$优于$W_t$（也就是错误更少）时才更新$W_t$。因为Pocket要比较错误率，需要计算所有的数据点，因此效率要低于PLA。</li>
+<li>如果数据集巧合是线性可分的，只要迭代次数够多，Pocket和PLA的效果是一样的，只是速度慢。</li>
+</ul>
+<h2>实践</h2>
+<p>讲了这么多理论知识，现在用python实践一下这个算法。简单起见，这里已知数据集是线性可分的，直接采用简单PLA就可以解决。核心代码不到20行，只需要理解train()函数即可，其它部分都是为了把这个图画出来。</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.animation</span> <span class="kn">import</span> <span class="n">FuncAnimation</span>
+
+<span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="s1">&#39;linear_separable_train.csv&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+<span class="n">datum</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+
+<span class="n">history</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">axes</span><span class="p">()</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">line</span><span class="p">,</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">label</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">init</span><span class="p">():</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">set_data</span><span class="p">([],</span> <span class="p">[])</span>
+    <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">datum</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;bo&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;rx&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">line</span><span class="p">,</span>
+
+
+<span class="k">def</span> <span class="nf">train</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">history</span>
+    <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># [w0, w1, w2]</span>
+    <span class="nb">iter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="nb">iter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">mistake</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">datum</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">]))</span>  <span class="c1"># [1, x1, x2]</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">X</span><span class="p">)):</span>
+                <span class="n">mistake</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">W</span> <span class="o">+=</span> <span class="n">label</span> <span class="o">*</span> <span class="n">X</span>
+                <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">W</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mistake</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">W</span>
+
+
+<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">history</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">history</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">w</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;iter</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;iter</span><span class="si">%d</span><span class="s1"> wo=</span><span class="si">%f</span><span class="s1"> w1=</span><span class="si">%f</span><span class="s1"> w2=</span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">w</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">line</span><span class="p">,</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">train</span><span class="p">()</span>
+    <span class="n">anim</span> <span class="o">=</span> <span class="n">FuncAnimation</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">update</span><span class="p">,</span> <span class="n">init_func</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">frames</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">history</span><span class="p">),</span> <span class="n">interval</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+    <span class="n">anim</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;line.gif&#39;</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">writer</span><span class="o">=</span><span class="s1">&#39;imagemagick&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+<p>运行效果如下：
+<img alt="pla_animation.gif-49.6kB" src="http://static.zybuluo.com/zzr0427/tqtkv6l81kshuphokh4a7t76/pla_animation.gif" /></p>
+<hr />
+<h2>参考资料</h2>
+<ol>
+<li>《台湾大学-机器学习基石-林轩田》第二讲 Perceptron Learning Algorithm</li>
+</ol>
+<blockquote>
+<p>配图来自《台湾大学-机器学习基石-林轩田》</p>
+<p>本文内容学习自互联网，采用<a href="https://creativecommons.org/licenses/by-nc-sa/2.5/cn/">署名-非商业性使用-相同方式共享 2.5 中国大陆</a>协议进行许可。如需转载，请保留文章所引用的那些原作者的信息。感谢原作者们的精彩分享。如有遗漏的引用，烦请告诉我，我将修改引用或删除文章。</p>
+</blockquote>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 四 22 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/pythonji-qi-xue-xi.html">Python机器学习</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/ji-qi-xue-xi.html">机器学习</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

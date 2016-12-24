@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, GIS">
+
+  <title>
+    PyCN技术评论
+&ndash; 怎么样用Python实现地理编码  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/怎么样用Python实现地理编码.html">怎么样用Python实现地理编码</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：时空Drei</h4>
+<h4>引言</h4>
+<p>今天看到一篇阿里云的文章<a href="https://mp.weixin.qq.com/s?__biz=MzA4NjI4MzM4MQ==&amp;mid=2660193327&amp;idx=1&amp;sn=a8dd48d0f7c047511d4a497d9e8626f0&amp;chksm=84b0f135b3c77823a3ed2cef9dd8742a7e571390a290fece872a78940c25a7308db29481f199&amp;key=fe4410a4c5efc39c845443c236f111d1cebd93c1b71394a945865ea9053ca">天下武功，唯快不破</a>，以物流行业为例，分析了 PostgreSQL 与 Greenplum 在地理位置信息处理，最佳路径算法，机器学习等方面的物流行业应用方法。其中提到了<strong>地址转换成坐标</strong>的问题，更专业些的名词应该是“地理编码”，即知道一个地址，如<code>北京市海淀区上地十街10号</code>，怎么样可以获取到对应的经纬度位置信息<code>(40,116)</code>，或者反过来。</p>
+<h4>地理编码概念</h4>
+<p>很多地图相关的厂商都提供了相关的API，我们可以直接利用这些API得到这些信息。比如百度的<code>Geocoding API</code>。 </p>
+<blockquote>
+<p>Geocoding API是一类接口，用于提供从地址到经纬度坐标或者从经纬度坐标到地址的转换服务，用户可以使用C# 、C++、Java等开发语言发送请求且接收JSON、XML的返回数据。<strong>Geocoding API包括地址解析和逆地址解析功能：</strong></p>
+</blockquote>
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-3f1e0fe86a0fb222.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<p>借用ESRI文档中更直观的一张图</p>
+<p><img alt="Paste_Image.png" src="http://upload-images.jianshu.io/upload_images/3129325-fa3f3b25a59dbf73.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<blockquote>
+<p><strong>地理编码</strong>：即地址解析，由详细到街道的结构化地址得到百度经纬度信息，例如：“北京市海淀区中关村南大街27号”地址解析的结果是“lng:116.31985,lat:39.959836”。同时，地理编码也支持名胜古迹、标志性建筑名称直接解析返回百度经纬度，例如：“百度大厦”地址解析的结果是“lng:116.30815,lat:40.056885” 。</p>
+<p><strong>逆地理编码</strong>：即逆地址解析，由百度经纬度信息得到结构化地址信息，例如：“lat:31.325152,lng:120.558957”逆地址解析的结果是“江苏省苏州市虎丘区塔园路318号”。</p>
+</blockquote>
+<p>不过，需要说明的一点是，若想使用百度的这套API的前提是，有百度账号并申请相应的Key。其实，除了百度之外，谷歌、ESRI、微软的Bing等都有类似的地理编码服务。不过这些服务大多没有专门针对Python的库并且彼此之间的Json结构也不一致。于是乎专治不服的Python大神做了一个专门的地理编码工具<code>geocoder</code>，将这些不同厂商的服务整合统一起来。</p>
+<h4>地理编码工具<code>geocoder</code></h4>
+<p>首先看一下它都支持哪些公司的地理编码服务:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Optimal</th>
+<th align="center">Usage Policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/ArcGIS.html">ArcGIS</a></td>
+<td>World</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Baidu.html">Baidu</a></td>
+<td>China</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Bing.html">Bing</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/CanadaPost.html">CanadaPost</a></td>
+<td>Canada</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/FreeGeoIP.html">FreeGeoIP</a></td>
+<td>World</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Geocoder-ca.html">Geocoder.ca</a></td>
+<td>CA &amp; US</td>
+<td align="center">Rate Limit</td>
+</tr>
+<tr>
+<td><a href="https://geocode.farm/">GeocodeFarm</a></td>
+<td>World</td>
+<td align="center"><a href="https://geocode.farm/geocoding/free-api-documentation/">Policy</a></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/GeoNames.html">GeoNames</a></td>
+<td>World</td>
+<td align="center">Username</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/GeoOttawa.html">GeoOttawa</a></td>
+<td>Ottawa</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Google.html">Google</a></td>
+<td>World</td>
+<td align="center">Rate Limit, <a href="https://developers.google.com/maps/documentation/geocoding/usage-limits">Policy</a></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/HERE.html">HERE</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/IPInfo.html">IPInfo</a></td>
+<td>World</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Mapbox.html">Mapbox</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/MapQuest.html">MapQuest</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Mapzen.html">Mapzen</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/MaxMind.html">MaxMind</a></td>
+<td>World</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/OpenCage.html">OpenCage</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/OpenStreetMap.html">OpenStreetMap</a></td>
+<td>World</td>
+<td align="center"><a href="https://wiki.openstreetmap.org/wiki/Nominatim_usage_policy">Policy</a></td>
+</tr>
+<tr>
+<td><a href="http://geoservices.tamu.edu/Services/Geocode/WebService/">Tamu</a></td>
+<td>US</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/TomTom.html">TomTom</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/What3Words.html">What3Words</a></td>
+<td>World</td>
+<td align="center">API key</td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Yahoo.html">Yahoo</a></td>
+<td>World</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/Yandex.html">Yandex</a></td>
+<td>Russia</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td><a href="http://geocoder.readthedocs.org/providers/TGOS.html">TGOS</a></td>
+<td>Taiwan</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<h5>安装</h5>
+<div class="highlight"><pre><span></span>pip install geocoder
+</pre></div>
+
+
+<h5>地理编码</h5>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">geocoder</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">google</span><span class="p">(</span><span class="s2">&quot;1403 Washington Ave, New Orleans, LA 70130&quot;</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">arcgis</span><span class="p">(</span><span class="s2">u&quot;北京市海淀区上地十街10号&quot;</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="n">latlng</span>
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>[29.9287839, -90.08421849999999]
+</pre></div>
+
+
+<p>也可以查看完整的geojson</p>
+<div class="highlight"><pre><span></span>g.geojson
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>{&#39;bbox&#39;: [-90.0855674802915,
+  29.9274349197085,
+  -90.0828695197085,
+  29.9301328802915],
+ &#39;geometry&#39;: {&#39;coordinates&#39;: [-90.08421849999999, 29.9287839],
+  &#39;type&#39;: &#39;Point&#39;},
+ &#39;properties&#39;: {&#39;accuracy&#39;: u&#39;ROOFTOP&#39;,
+  &#39;address&#39;: u&#39;1403 Washington Ave, New Orleans, LA 70130, USA&#39;,
+  &#39;bbox&#39;: [-90.0855674802915,
+   29.9274349197085,
+   -90.0828695197085,
+   29.9301328802915],
+  &#39;city&#39;: u&#39;New Orleans&#39;,
+  &#39;confidence&#39;: 9,
+  &#39;country&#39;: u&#39;US&#39;,
+  &#39;county&#39;: u&#39;Orleans Parish&#39;,
+  &#39;encoding&#39;: &#39;utf-8&#39;,
+  &#39;housenumber&#39;: u&#39;1403&#39;,
+  &#39;lat&#39;: 29.9287839,
+  &#39;lng&#39;: -90.08421849999999,
+  &#39;location&#39;: &#39;1403 Washington Ave, New Orleans, LA 70130&#39;,
+  &#39;neighborhood&#39;: u&#39;Garden District&#39;,
+  &#39;ok&#39;: True,
+  &#39;place&#39;: u&#39;ChIJGyFHWc2lIIYRYSoneaXAUiw&#39;,
+  &#39;postal&#39;: u&#39;70130&#39;,
+  &#39;provider&#39;: &#39;google&#39;,
+  &#39;quality&#39;: u&#39;street_address&#39;,
+  &#39;state&#39;: u&#39;LA&#39;,
+  &#39;status&#39;: &#39;OK&#39;,
+  &#39;status_code&#39;: 200,
+  &#39;street&#39;: u&#39;Washington Ave&#39;},
+ &#39;type&#39;: &#39;Feature&#39;}
+</pre></div>
+
+
+<p>直接用Google尝试查询中文地址时失败</p>
+<div class="highlight"><pre><span></span>g = geocoder.google(u&quot;北京市海淀区上地十街10号&quot;)
+g.ok
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>False
+</pre></div>
+
+
+<p>用百度应该没问题，不过我没有申请相应的key。切换到arcgis，能够成功编码</p>
+<div class="highlight"><pre><span></span>g = geocoder.arcgis(u&quot;北京市海淀区上地十街10号&quot;)
+g.latlng
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>[40.050934, 116.30079]
+</pre></div>
+
+
+<h5>逆地理编码</h5>
+<div class="highlight"><pre><span></span>g = geocoder.google([29.9287839, -90.08421849999999], method=&#39;reverse&#39;)
+
+print g.address
+print g.city
+print g.state
+print g.country
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>1403 Washington Ave, New Orleans, LA 70115, USA
+New Orleans
+LA
+US
+</pre></div>
+
+
+<p>换成中国的地址</p>
+<div class="highlight"><pre><span></span>g = geocoder.google([40.050934, 116.30079], method=&#39;reverse&#39;)
+print g.address
+print g.city
+print g.state
+print g.country
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>Bai Du Da Sha, Haidian Qu, Beijing Shi, China, 100193
+Beijing
+Beijing Shi
+CN
+</pre></div>
+
+
+<p>用arcgis的服务试试</p>
+<div class="highlight"><pre><span></span>g = geocoder.arcgis([40.050934, 116.30079], method=&#39;reverse&#39;)
+print g.address
+print g.city
+print g.state
+print g.country
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>None
+北京市
+北京市
+CHN
+</pre></div>
+
+
+<p>Google转换成的是英文，但地址比较全。arcgis虽然是中文，但是详细的地址居然输出为了None，这有个<code>X</code>用。</p>
+<h5>其他</h5>
+<p><code>geocoder</code> 的功能不止于此，它还可以查IP（包括自己的）。</p>
+<div class="highlight"><pre><span></span>g = geocoder.ip(&#39;199.7.157.0&#39;)
+print g.latlng
+print g.city
+g = geocoder.ip(&#39;me&#39;)
+print g.latlng
+print g.city
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span><span class="k">[43.6934, -79.4857]</span>
+<span class="err">Toronto</span>
+<span class="k">[51.05, 13.75]</span>
+<span class="err">Dresden</span>
+</pre></div>
+
+
+<p>查询一个城市的空间包围盒</p>
+<div class="highlight"><pre><span></span>g = geocoder.arcgis(u&quot;山东&quot;)
+g.bbox
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>{&#39;northeast&#39;: [38.976997, 121.976998], &#39;southwest&#39;: [33.022997, 116.022998]}
+</pre></div>
+
+
+<h4>小结</h4>
+<p>空间信息既可以利用行政区划、自然地理区域等文本信息描述，也可以用坐标系统、数字（邮编等）来标识。利用地理编码技术，可以将空间信息的地理定位要素与相应的文本信息关联起来。本文主要介绍了<code>geocoder</code>地理编码这一小工具，可以方便快捷的利用地图等相关厂商提供的地理编码服务，将文字描述的位置转换成地图上的经纬度，或者通过地图上的某个位置坐标获得相应的位置信息文字描述。</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 四 22 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python.html">Python</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/gis.html">GIS</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>
