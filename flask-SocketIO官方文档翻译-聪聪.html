@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, flask">
+
+  <title>
+    PyCN技术评论
+&ndash; flask-SocketIO官方文档翻译  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/flask-SocketIO官方文档翻译-聪聪.html">flask-SocketIO官方文档翻译</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：聪聪</h4>
+<p>[TOC]</p>
+<p>序言：</p>
+<p>本人工作中需要用到flask-socketio，在学习英文文档时发现，flask-socketio目前并没有相关的中文文档。斗胆利用业余时间将这个库的英文文档翻译出来，希望能够帮助那些没有时间或精力研习英文文档的朋友。鉴于水平有限，翻译错误在所难免，还望各位不吝赐教。任何问题都可以发送邮件给我。(email: <a href="zhancongc@gmail.com">zhancongc@gmail.com</a>)</p>
+<p>注意：译者所用的flask-socketio版本号是：2.7.2，无特殊情况，本文档的一切特性均以2.7.2版本为准。</p>
+<p>正文：</p>
+<p>flask-SocketIO 为flask应用提供了一个客户端与服务器之间低延迟的双向通信。客户端应用可以用Javascript,C++,Java,Swift或者其它任意的编程语言的socketio官方库的客户端去和服务端创建一个永久的连接。</p>
+<h2>1.安装</h2>
+<p>你可以使用pip这样常规的方式来安装这个包：
+<code>&gt; pip install flask-socketio</code></p>
+<h2>2.依赖</h2>
+<p>Flask-SocketIO兼容python2.7和python3.3+。这个异步的服务的包的依赖可以有三个选择：</p>
+<ul>
+<li>
+<p>eventlet：这是最好的选择，支持长连接(long-polling)和websocket传输。</p>
+</li>
+<li>
+<p>gevent: 支持许多不同的配置，长连接传输是完全支持的，但是不同于eventlet，gevent并没有原生支持websocket。添加websocket（功能）有两种方法：gevent-websocket包为gevent添加了websocket支持，但是不幸的是，这个包只能用于python2；至于另外一个选择，是用uWSGI网络服务器，这个能够在功能上支持websocket。gevent依然是可操作的选择，但是优先级略微地低于eventlet。</p>
+</li>
+<li>
+<p>基于Werkzeug开发的flask服务器也是可行的，使用缺乏可操作性的caveat，它仅可以被用于简化workflow的开发。这个方案仅支持长连接方式传输。</p>
+</li>
+</ul>
+<p>这个扩展自动寻找已安装的异步框架来使用。最优先的是eventlet，其次是gevent。在gevent中，对于websocket的支持，uWSGI是优先考虑的，其次是gevent-websocket。如果eventlet和gevent都没有被安装，那么就使用flask-development将会被启用。</p>
+<p>如果使用多进程，一个消息队列服务将会被进程用来协调操作，例如广播。支持这个队列的有Redis,RabbitMQ,还有其他由Kombu支持的包。</p>
+<p>在客户端，Javascript官方的SOcket.IO可以用来创建一个与服务端通信的连接。这里有许多用Swift,Java,C++编写的官方客户端。非官方的客户端也是可以工作的，只要他们支持了Socket.IO协议。</p>
+<h2>3.初始化</h2>
+<p>接下来的代码例子揭示了，怎样去把Flask-SocketIO引入到Flask应用：</p>
+<div class="highlight"><pre><span></span>    <span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">render_template</span>
+    <span class="kn">from</span> <span class="nn">flask_socketio</span> <span class="kn">import</span> <span class="n">SocketIO</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">configp</span><span class="p">[</span><span class="s1">&#39;SECRET_KEY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;secret!&#39;</span>
+    <span class="n">socketio</span> <span class="o">=</span> <span class="n">SocketIO</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+        <span class="n">socketio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</pre></div>
+
+
+<p>init_app()风格的初始化也是支持的。注意网络服务器的启动。函数socketio.run()封装了网络服务器的启动部分，并且代替了flask开发服务器的标准启动语句<code>app.run()</code>。当应用在debug模式下，Werkzeug开发服务器也是在<code>socketio.run()</code>中被合理地应用和配置。如果可用的话，在生产模式下eventlet网络服务器也是被应用的，否则，gevent网络服务器将会被启用。如果eventlet和gevent都没有被安装，那么将会使用Werkzeug开发网络服务器。</p>
+<p>在flask 0.11中被引入的可点击命令行界面也是被支持的。这个扩展提供了一个新版的flask run命令，适合启动一个Socket.IO服务器。用法示例：</p>
+<p><code>FLASK_APP = my_app flask run</code></p>
+<p>这个应用只能为那种连接到客户端的页面服务，并且客户端还需引用Socket.IO库并且建立一个连接：</p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;script</span> <span class="na">type=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">scr=</span><span class="s">&quot;//cdn.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+
+<span class="nt">&lt;script</span> <span class="na">type=</span><span class="s">&quot;text/javascript&quot;</span> <span class="na">charset=</span><span class="s">&quot;utf-8&quot;</span><span class="nt">&gt;</span>
+    var socket = io.connect(location.protocol + &#39;//&#39; + document.domain + &#39;:&#39; + location.port);
+    socket.on(&#39;connect&#39;, function() {
+        socket.emit(&#39;my event&#39;, {data: &#39;I\&#39;m connected!&#39;});
+    });
+<span class="nt">&lt;/script&gt;</span>
+</pre></div>
+
+
+<h2>4.接收消息</h2>
+<p>在使用SocketIO的时候，消息将被作为活动(event)的两端接收。在客户端使用JavaScript回叫信号。使用Flask-SocketIO服务器，需要为这些活动注册处理器(handler)，类似于视图函数怎样处理路由。</p>
+<p>下面的例子是为一个未命名的活动创建了一个服务端的活动处理器(event handler)：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;message&#39;)
+def handle_message(message):
+    print(&#39;received message:　&#39; + message)
+</pre></div>
+
+
+<p>在上面的例子中，使用了字符串消息。此外，另一种未命名的活动使用了JSON数据：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;json&#39;)
+def handle_json(json):
+    print(&#39;received json:　&#39;+ str(json))
+</pre></div>
+
+
+<p>最灵活的一种活动使用了自定义的活动名称。这些活动的消息数据类型可以是字符串，字节，整型，或者JSON：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;my event&#39;)
+def handle_my_custom_event(json):
+    print(&#39;received json: &#39; + str(json))
+</pre></div>
+
+
+<p>自定义名称的活动可以支持多参数：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;my event&#39;)
+def handle_my_sustom_event(arg1, arg2, arg3):
+    print(&#39;received args: &#39; + arg1 + arg2 + arg3)
+</pre></div>
+
+
+<p>命名活动是极度复杂的，在其消除了额外的元数据(metadata)来描述消息类型的时候。</p>
+<p>Flask-SocketIO同样支持命名空间(namespace)，这个功能允许客户端在一个相同的物理socket上多路复用几个独立的连接：</p>
+<div class="highlight"><pre><span></span>@scoketio.on(&#39;my event&#39;, namespace=&#39;/test&#39;)
+def handle_my_custom_namespace_event(json):
+    print(&#39;received json: &#39; + str(json))
+</pre></div>
+
+
+<p>当一个命名空间没有具体指出，一个全局的命名空间'/'将会被启用</p>
+<p>有时，装饰器的语法并不方便，on_event()方法可以作为替代</p>
+<div class="highlight"><pre><span></span>def my_function_handler(data):
+    pass
+socketio.on_event(&#39;my event&#39;, my_function_handler, namespace=&#39;/test&#39;)
+</pre></div>
+
+
+<p>客户端要求一个确认回复，来确认消息的接收。任何一个从处理函数(handler function)中返回的值都会在回调函数中作为一个参数返回给客户端。</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;my event&#39;)
+def handle_my_custom_event(json):
+    print(&#39;received json:　&#39;　+ str(json))
+    return(&#39;one&#39;, 2)
+</pre></div>
+
+
+<p>在上面的例子中，客户端回调函数将会回调两个参数，<code>one</code>和<code>2</code>。如果处理函数没有返回值，这个客户端回调函数将以没有参数的情况返回。</p>
+<h2>5.发送消息</h2>
+<p>之前章节定义的SocketIO活动处理函数可以凭借<code>send()</code>函数和<code>emit()</code>函数来连接客户端</p>
+<p>接下来的例子是将接收到的消息退回到发送它们的客户端：</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask_socketio</span> <span class="kn">import</span> <span class="n">send</span><span class="p">,</span> <span class="n">emit</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_message</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s1">&#39;json&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_json</span><span class="p">(</span><span class="n">json</span><span class="p">):</span>
+    <span class="n">send</span><span class="p">(</span><span class="n">json</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="nd">@socket.on</span><span class="p">(</span><span class="s1">&#39;my event&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_my_custom_event</span><span class="p">(</span><span class="n">json</span><span class="p">):</span>
+    <span class="n">emit</span><span class="p">(</span><span class="s1">&#39;my response&#39;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+</pre></div>
+
+
+<p>注释一下，<code>send()</code>和<code>emit()</code>是怎样用在已命名和未命名的活动上的</p>
+<p>当运作在有命名空间的活动中时，<code>send()</code>和<code>emit()</code>默认用在接下来的消息中。不同的命名空间可以被具体化到可选择的可选择的命名空间参数上：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;message&#39;)
+def handle_message(message):
+    send(message, namespace=&#39;/chat&#39;)
+
+@socketio.on(&#39;message&#39;)
+def handle_my_sustom_event(json):
+    emit(&#39;my response&#39;, json, namespace=&#39;/chat&#39;)
+</pre></div>
+
+
+<p>为了实现发送一个多参数的活动，发送一个元组：</p>
+<div class="highlight"><pre><span></span>def ack():
+    print(&#39;message was received!&#39;)
+
+@socketio.on(&#39;my event&#39;)
+def handle_my_custom_event(json):
+    emit(&#39;my response&#39;, json, callback=ack)
+</pre></div>
+
+
+<p>使用回调时，JavaScript客户端使用回调函数在接收到的信息时回调。在客户端应用启用回调函数时，服务器会启用服务端相匹配的函数去响应。如果客户端没有回调任何值，这些将会作为服务端的响应被提供。</p>
+<p>客户端的应用同样要求一个来自服务端的确认信息。如果服务端想为一次响应提供一个参数，它必须要在活动处理函数中被返回。</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;my event&#39;)
+def handle_my_custom_event(json):
+    # ... handle the event
+    return &#39;foo&#39;, &#39;bar&#39;, 123 # client callback will receive these 3 arguments
+</pre></div>
+
+
+<h2>6.广播</h2>
+<p>SocketIO另外一个非常有用的特性就是广播消息。Flask-SocketIO中，只要将<code>broadcast = True</code>这个可选参数加到send()和emit()中即可：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;my event&#39;)
+def handle_my_custom_event(data):
+    emit(&#39;my response&#39;, data, broadcast=True)
+</pre></div>
+
+
+<p>当一个消息以广播选项被开启的情况下被发出的时候，连接到这个命名空间的所有客户端都会收到这个消息。注意：广播的消息将不会被回调。</p>
+<p>所有的例子表明，直到这个节点服务器才回复客户端发出的这个活动。但是另外的应用中，服务器需要成为消息的发起者。对于起源于服务器的活动而言，这个有利于发送通知到客户端，比如在后台线程中。<code>socketio.send()</code>和<code>socketio.emit()</code>方法可以用来对所有的连接进行广播。</p>
+<div class="highlight"><pre><span></span>def some_function():
+    socketio.emit(&#39;some event&#39;, {&#39;data&#39;: 42})
+</pre></div>
+
+
+<p>注意：通过对send()和emit()的上下文的感知，<code>socketio.send()</code>和<code>socketio.emit()</code>不是相同的函数。同样需要注意的是：以上的用法是没有客户端内容，所以假定<code>broadcast=True</code>，并且需要被具体化。</p>
+<h2>7.房间</h2>
+<p>在许多应用中，有必要将用户划分为可以一并处理的几个子集。最好的例子是，一个包含多个房间的聊天应用，当用户收到他所在的房间的消息，而不会收到其他人所在房间的消息。Flask-SocketIO支持通过<code>join_room()</code>和<code>leave_room()</code>函数来支持房间的概念：</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask_socketio</span> <span class="kn">import</span> <span class="n">join_room</span><span class="p">,</span> <span class="n">leave_room</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s1">&#39;join&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">on_join</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">uername</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span>
+    <span class="n">room</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">]</span>
+    <span class="n">join_room</span><span class="p">(</span><span class="n">room</span><span class="p">)</span>
+    <span class="n">send</span><span class="p">(</span><span class="n">username</span> <span class="o">+</span> <span class="s1">&#39; has entered the room.&#39;</span><span class="p">,</span><span class="n">room</span><span class="o">=</span><span class="n">room</span><span class="p">)</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s1">&#39;leave&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">on_leave</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span>
+    <span class="n">room</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">]</span>
+    <span class="n">leave_room</span><span class="p">(</span><span class="n">room</span><span class="p">)</span>
+    <span class="n">send</span><span class="p">(</span><span class="n">username</span> <span class="o">+</span> <span class="s1">&#39; has left the room.&#39;</span><span class="p">,</span> <span class="n">room</span><span class="o">=</span><span class="n">room</span><span class="p">)</span>
+</pre></div>
+
+
+<p><code>send()</code>和<code>emit()</code>函数接收<code>room</code>作为一个参数，将消息广播到所有在给定房间里的客户端。</p>
+<p>所有连接（到服务器）的客户端都被分配到一个房间，并且以连接的会话编号(session ID)命名这个房间的名称，这个会话编号由request.sid获得。一个既定的客户端可以加入任何一个房间，这个房间的名称可以是任何名称。当一个客户端终止（与服务器的）连接，它将会从原来所在的房间里除名。这两个上下文无关的函数<code>socketio.send()</code>和<code>socketio.emit()</code>也会接受参数<code>room</code>，把消息广播到这个房间里的所有客户端。</p>
+<p>一旦所有的客户端被分配到一个自己的房间，为了将消息发送到一个唯一的客户端，会话编号可以作为参数room的值。</p>
+<h2>8.连接活动</h2>
+<p>Flask-SocketIO同样支持连接和断开的活动。接下来的例子将会展示怎样为他们注册一个处理函数：</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;connect&#39;, namespace=&#39;/chat&#39;)
+def test_connect():
+    emit(&#39;my response&#39;, {&#39;data&#39;: &#39;Connected&#39;})
+
+@socketio.on(&#39;disconnected&#39;, namespace=&#39;/chat&#39;)
+def test_disconnected():
+    print(&#39;Client disconnected&#39;)
+</pre></div>
+
+
+<p>连接活动处理处理函数可以选择性地返回一个False去拒绝这个连接。这是为了在这一点上进行身份认证。</p>
+<p>注意：连接和断开活动可以在各自使用的命名空间内独立地发送。</p>
+<h2>9.基于类的命名空间</h2>
+<p>以上描述的作为基于装饰器的活动处理函数的替代，属于命名空间的活动处理函数可以被创造成一个类的方法。Flask_socketio.Namespace提供了一个基于类的方法来创造命名空间。</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask_socketio</span> <span class="kn">import</span> <span class="n">Namespace</span><span class="p">,</span> <span class="n">emit</span>
+
+<span class="k">class</span> <span class="nc">MyCustomNamespace</span><span class="p">(</span><span class="n">Namespace</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_conect</span><span class="p">():</span>
+        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">on_disconnect</span><span class="p">():</span>
+        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">on_my_event</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+        <span class="n">emit</span><span class="p">(</span><span class="s1">&#39;my_response&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+<span class="n">socket</span><span class="o">.</span><span class="n">on_namespace</span><span class="p">(</span><span class="n">MyCustomNamespace</span><span class="p">(</span><span class="s1">&#39;/test&#39;</span><span class="p">))</span>
+</pre></div>
+
+
+<p>使用一个基于类的命名空间时，所有服务器接收到的活动将会被分配到一个方法，该方法的活动名称是以on_为前缀的活动。例如，名称为<code>my_event</code>的活动，将会由<code>on_my_event</code>函数来处理。如果一个接收到的活动在命名空间类中没有与之相匹配的处理方法。这个活动将会被忽略。所有在基于类的命名空间内的活动必须使用具有合法的方法名称的单词。</p>
+<p>作为一个定义基于类的命名空间的简便方法，这个命名空间实例包括了几个版本的flask_socketio.SocketIO类，并且他们默认的命名空间参数并没有给出。</p>
+<p>如果一个活动同时具有在基于类的命名空间里的处理函数和基于装饰器的处理函数，只有装饰器函数会被调用。</p>
+<h2>10.错误处理</h2>
+<p>Flask-SocketIO也可以处理异常：</p>
+<div class="highlight"><pre><span></span>@socketio.on_error()         # handles the dafault namespace
+def error_handler(e):
+    pass
+
+@socketio.on_error(&#39;/chat&#39;)  # handles the &#39;/chat&#39; namespace
+def error_handler_chat(e):
+    pass
+
+@socketio.on_error_default   # handles all namespaces without an explicit error handler
+def default_error_handler(e):
+    pass
+</pre></div>
+
+
+<p>错误处理函数将异常对象作为一个参数</p>
+<p>这个消息和数据参数作为当前的请求将会被察觉<code>request.event</code>变量察觉，这有利于外部活动处理函数的错误日志和调试</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s2">&quot;my error event&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">on_my_event</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">()</span>
+
+<span class="nd">@socket.on_error_default</span>
+<span class="k">def</span> <span class="nf">default_error_handler</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">event</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">])</span> <span class="c1"># &quot;my error event&quot;</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">event</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">])</span>    <span class="c1"># (data,)</span>
+</pre></div>
+
+
+<h2>11.访问flask上下文全局变量</h2>
+<p>SocketIO活动处理不同于路由处理，在于它引入了许多容易混淆的东西，围绕着SocketIO什么可以做，什么不可以做。最主要的区别就是SocketIO活动发生在单个长期运行在上下文的请求之中。</p>
+<p>尽管有所不同，Flask-SocketIO将环境改造成类似于常规HTTP请求，使SocketIO活动处理更加轻松。接下来的列表描述了什么将会生效，什么不会。</p>
+<ul>
+<li>
+<p>在活动处理函数之前推送应用的上下文使得<code>current_app</code>和<code>g</code>可以在处理函数中可用。</p>
+</li>
+<li>
+<p>这个请求的上下文同样在回调处理函数前被启用，也使<code>request</code>和<code>session</code>可用。但是注意到WebSocket活动与之并没有独立的联系，因此为连接期间分派的所有事件推送启动连接的请求上下文。</p>
+</li>
+<li>
+<p><code>request</code>上下文全局变量随一个sid成员增加，这个成员是为了给连接一个独特的会话编号(session ID)。这个值在客户端刚刚添加的时候，就被最初的房间使用了。</p>
+</li>
+<li>
+<p>request上下文全局变量由包含了当前处理函数的命名空间和活动参数的<code>argument</code>和<code>event</code>来增加。这个活动成员是一个包含了<code>message</code>和<code>args</code>键值的字典。</p>
+</li>
+<li>
+<p><code>session</code>上下文全局变量表现得和通常的请求不一样。在连接开始建立的时候，就会复制一份用户的会话在这个连接上下文中给处理器调用。如果SocketIO处理器修改了这个会话，这个修改过的会话就会为未来的SocketIO处理器保留，但是正常的HTTP路由处理器不会察觉这些改变。有效率的是，当SocketIO处理器改变这个会话的时候，会话就会为这些处理器创建一个“分支”(fork)。这个限制的技术原因是用户的会话cookie必须要发送到客户端，这需要HTTP请求和应答而不是SocketIO连接。在使用服务端的会话时，比如那些由Flask-Session或者Flask-KVSession扩展提供的会话，在HTTP处理器中的会话改变也可以在SocketIO处理器中可见，只要这个会话不是在SocketIO处理器中修改的。</p>
+</li>
+<li>
+<p><code>before_request</code>和<code>after_request</code>钩子不会调用SocketIO活动处理器。</p>
+</li>
+<li>
+<p>SocketIO处理器可以使用自定义的装饰器，但是大多数Flask装饰器并不适于SocketIO处理器，考虑到SocketIO连接中没有Response对象这一概念。</p>
+</li>
+</ul>
+<h2>12.身份认证</h2>
+<p>应用的共同需要就是验证他们用户的身份。自从SocketIO没有使用HTTP请求和应答，传统的基于网页表单和HTTP请求的机制不能用于SocketIO连接。如果需要的话，应用可以实施自定义的登陆表单，当用户按下提交按钮时，它利用一个SocketIO消息将证书发送到服务器。</p>
+<p>然而，在大多数情况下，在SocketIO连接建立之前使用传统的身份验证方式会更加方便，用户的身份信息可以被记录下来作为用户会话或者cookie，之后在SocketIO连接建立起来的时候，这些信息也可以被SocketIO活动处理器得到。</p>
+<h2>13.使用Flask-SocketIO的Flask-Login模块</h2>
+<p>Flask-SocketIO可以获得由Flask-Login维护的登陆信息。在一个正常的Flask-Login身份认证被使用的时候，login_user()函数将会被调用去记录用户会话中的用户，任何SocketIO连接都可以得到<code>current_user</code>上下文变量:</p>
+<div class="highlight"><pre><span></span>@socketio.on(&#39;connect&#39;)
+def connect_handler():
+    if current_user.is_authenticated:
+        emit(&#39;my response&#39;,
+            {&#39;message&#39;:&#39;{0} has joined&#39;.format(current_user.name)},
+            broadcast=True
+        )
+    else:
+        return False # not allowed here
+</pre></div>
+
+
+<p>注意到<code>login_required</code>装饰器不能和SocketIO活动处理器一起使用，但是一个自定义的关闭连接无身份认证的装饰器可以按下面的方式创建：</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">flask_login</span> <span class="kn">import</span> <span class="n">current_user</span>
+<span class="kn">from</span> <span class="nn">flask_socketio</span> <span class="kn">import</span> <span class="n">disconnect</span>
+
+<span class="k">def</span> <span class="nf">authenticated_only</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="nd">@functools.wraps</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">wraped</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">current_user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+            <span class="n">disconnect</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wraped</span>
+
+<span class="nd">@socketio.on</span><span class="p">(</span><span class="s1">&#39;my event&#39;</span><span class="p">)</span>
+<span class="nd">@authenticated_only</span>
+<span class="k">def</span> <span class="nf">handle_my_custom_event</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">emit</span><span class="p">(</span><span class="s1">&#39;my response&#39;</span><span class="p">,</span>
+        <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;{0} has joined&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">current_user</span><span class="o">.</span><span class="n">name</span><span class="p">)},</span>
+        <span class="n">broadcast</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+<h2>14.部署</h2>
+<p>我们有多种部署Flask-SocketIO服务器的选择，从最简单到疯狂地复杂。在这一章节里，我们将会
+介绍最普遍的选择。</p>
+<h4>嵌入式服务器</h4>
+<p>最简单的策略是安装eventlet或者gevent，并且就像前面章节的例子中引用<code>socketio.run(app)</code>的方式来启动网络服务器。这个将会在eventlet或者gevent网络服务器中启动这个应用，被嵌入的网络服务器是哪一个取决于是安装的是哪一个。</p>
+<p>注意到<code>socketio.run(app)</code>运行在eventlet或gevent已安装上的生产服务器中。如果它们中没有一个被安装，那么这个应用运行在Flask开发服务器中，这并不适于生产环境的使用。</p>
+<p>不幸的是，这个选择并不能在带有uWSGI的gevent服务器上使用，你可以在下面获取更多有关这个选项的信息。</p>
+<h4>Gunicorn网络服务器</h4>
+<p>作为<code>socketio.run(app)</code>替代方法的就是使用gunicorn作为网络服务器，工作在eventlet或gevent下。这个选择下，除了gunicorn要安装，eventlet或者gevent也是不可缺少的。这个条命令将会启动这个基于gunicorn的eventlet服务器：
+    <code>gunnicorn --worker--class eventlet -w 1 module:app</code></p>
+<p>如果你更倾向于使用gevent，启动服务器的命令如下：
+    <code>gunicorn -k gevent -w 1 module:app</code></p>
+<p>当使用gunicorn作为gevent的工作站并且websocket支持也被提供的时候，上述命令就必须被改成选择一个自定义的gevent网络服务器来支持websocket协议。修改后的命令如下：
+    <code>gunicorn -k geventwebsocket.gunicorn.worker.GeventWebSocketWorker -w 1 module:app</code></p>
+<p>在上述这些命令中，module是python模块或者是定义了应用实例的包，此外，app是应用实例本身。</p>
+<p>Gunicorn 18.0版本是被推荐和Flask-SocketIO搭配的版本。19.x版本已知在带有WebSocket的一些特定部署场景下存在不兼容的情况。</p>
+<p>gunicorn由于使用了有限的负载均衡算法，不可能在使用这种网络服务器时调用两个以上工作进程因为这个原因，上面的所有例子中都包含了<code>-w 1</code>的可选参数。</p>
+<h2>15.uWSGI网络服务器</h2>
+<p>当使用uWSGI网络服务器搭配geventd的时候，Socket.IO服务器的时候，可以利用uWSGI原生的WebSocket支持。</p>
+<p>一个配置和运用uWSGI服务器完整的解释超出了本文的论述范围。uWSGI服务器确实是一个比较复杂的，它提供了大量而又详尽的设置选项。它必须使用Websocket和SSL编译才能支持WebSocket传输。作为介绍，下面的命令启动了一个uWSGI服务器作为范例，这个应用app.py运行在端口5000：
+    <code>uwsgi --http :5000 --gevent 1000 --http-websockets --master --wsgi-file app.py --callable app</code></p>
+<h2>16.使用nginx作为反向代理服务器</h2>
+<p>使用nginx作为前端的反向代理将请求传递给应用是可行的。然而，只有nginx 1.4版本以上才支持WebSocket协议。下面是nginx代理HTTP和WebSocket请求的一个最基本的配置：</p>
+<div class="highlight"><pre><span></span>    <span class="nt">server</span> <span class="p">{</span>
+        <span class="n">listen</span> <span class="m">80</span><span class="p">;</span>
+        <span class="n">server_name</span> <span class="n">_</span><span class="p">;</span>
+
+        <span class="n">location</span> <span class="o">/</span> <span class="err">{</span>
+            <span class="n">include</span> <span class="n">proxy_params</span><span class="p">;</span>
+            <span class="n">proxy_pass</span> <span class="n">http</span><span class="o">://</span><span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5000</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="nt">location</span> <span class="o">/</span><span class="nt">socket</span><span class="nc">.io</span> <span class="p">{</span>
+            <span class="n">include</span> <span class="n">proxy_params</span><span class="p">;</span>
+            <span class="n">proxy_http_version</span> <span class="m">1</span><span class="o">.</span><span class="m">1</span><span class="p">;</span>
+            <span class="n">proxy_buffering</span> <span class="n">off</span><span class="p">;</span>
+            <span class="n">proxy_set_header</span> <span class="n">Upgrade</span> <span class="err">$</span><span class="n">http_upgrade</span><span class="p">;</span>
+            <span class="n">proxy_set_header</span> <span class="n">Connection</span> <span class="s2">&quot;Upgrade&quot;</span><span class="p">;</span>
+            <span class="n">proxy_pass</span> <span class="n">http</span><span class="o">://</span><span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5000</span><span class="o">/</span><span class="n">socket</span><span class="o">.</span><span class="n">io</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="err">}</span>
+</pre></div>
+
+
+<p>下面的例子增加了对负载平衡多个服务器的支持：</p>
+<div class="highlight"><pre><span></span>    <span class="nt">upstream</span> <span class="nt">socketio_nodes</span> <span class="p">{</span>
+        <span class="n">ip_hash</span><span class="p">;</span>
+
+        <span class="n">server</span> <span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5000</span><span class="p">;</span>
+        <span class="n">server</span> <span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5001</span><span class="p">;</span>
+        <span class="n">server</span> <span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5002</span><span class="p">;</span>
+        <span class="err">#</span> <span class="n">to</span> <span class="n">scale</span> <span class="n">the</span> <span class="n">app</span><span class="o">,</span> <span class="n">just</span> <span class="n">add</span> <span class="n">more</span> <span class="n">nodes</span> <span class="n">here</span><span class="o">!</span>
+    <span class="p">}</span>
+
+    <span class="nt">server</span> <span class="p">{</span>
+        <span class="n">listen</span> <span class="m">80</span><span class="p">;</span>
+        <span class="n">server_name</span> <span class="n">_</span><span class="p">;</span>
+
+        <span class="n">location</span> <span class="o">/</span> <span class="err">{</span>
+            <span class="n">include</span> <span class="n">proxy_params</span><span class="p">;</span>
+            <span class="n">proxy_pass</span> <span class="n">http</span><span class="o">://</span><span class="m">127</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">0</span><span class="o">.</span><span class="m">1</span><span class="o">:</span><span class="m">5000</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="nt">location</span> <span class="o">/</span><span class="nt">socket</span><span class="nc">.io</span> <span class="p">{</span>
+            <span class="n">include</span> <span class="n">proxy_params</span><span class="p">;</span>
+            <span class="n">proxy_http_version</span> <span class="m">1</span><span class="o">.</span><span class="m">1</span><span class="p">;</span>
+            <span class="n">proxy_buffering</span> <span class="n">off</span><span class="p">;</span>
+            <span class="n">proxy_set_header</span> <span class="n">Upgrade</span> <span class="err">$</span><span class="n">http_upgrade</span><span class="p">;</span>
+            <span class="n">proxy_set_header</span> <span class="n">Connection</span> <span class="s2">&quot;Upgrade&quot;</span><span class="p">;</span>
+            <span class="n">proxy_pass</span> <span class="n">http</span><span class="o">://</span><span class="n">socketio_nodes</span><span class="o">/</span><span class="n">socket</span><span class="o">.</span><span class="n">io</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="err">}</span>
+</pre></div>
+
+
+<p>虽然上面的例子可以作为最初的配置工作，要知道生产环境安装的nginx需要一个完整的配置，包括部署的其它方面，例如服务于静态文件的assert和SSL支持。</p>
+<h2>17.使用多个工作站</h2>
+<p>Flask-SocketIO从2.0版本起带有负载均衡器支持多个工作站。部署多个工作站给了使用Flask-SocketIO的应用程序有能力在多进程和多主机之间传播客户端链接，这种方式的扩展支持极大规模的并发客户端。</p>
+<p>使用多个Flask-SocketIO工作站需要两个依赖：
+<em> 负载均衡器必须要配置成总是将所有的HTTP请求从一个给定的客户端转发到同样的工作站中。这有时会作为<code>sticky session</code>被提及。对于nginx，使用这个ip_bash指示来达到上述要求。Gunicorn不能用于多工作站，因为它的负载均衡算法并不支持粘性会话(sticky session)。
+</em> 一旦每个服务器只拥有一个客户端连接，在Redis、RabbitMQ等例子中，消息队列将会被使用，来协调复杂的操作，比如：广播和房间。</p>
+<p>当使用消息队列的时候，有许多额外的依赖包需要被安装：
+<em> 对于Redis，redis包必须被安装(<code>pip install redis</code>)。
+</em> 对于RabbitMQ，kombu包必须要被安装(<code>pip install kombu</code>)。
+<em> 对于其它Kombu支持的消息队列，<a href="http://docs.celeryproject.org/projects/kombu/en/latest/introduction.html#transport-comparison">Kombu documentation</a>里可以找到需要的依赖。
+</em> 如果使用了eventlet或者gevent，那么通常需要使用猴子(Monkey)修补Python标准库来强制消息队列包使用协同友好的函数和类。</p>
+<p>为了启动多个Flask-SocketIO服务器，你必须首先确保消息队列服务正在运行。为了开启一个Socket.IO服务器，使他连接到一个消息队列，需要添加参数<code>message_queue</code>到构造函数SockIO：
+<code>socketio=SocketIO(app,message_queue='redis://')</code>
+参数message_queue的值就是队列服务所使用的连接URL。对于一个运行在同一个作为服务器的主机中的Redis队列来说，可以使用<code>redis://</code>这样的URL。同样，对于一个默认的RabbitMQ队列可以使用<code>amqp://</code>开头的URL。Kombu包有一个文档章节阐述了对于所有支持队列的URL格式。</p>
+<h2>18.外部进程消息</h2>
+<p>对于许多类型的应用，从非服务端创建会话活动很有必要，例如一个Celery工作站。如果SocketIO服务器并没有按照前面章节那样配置监听队列，那么所有其它的进程可以像服务器那样创建它自己的SocketIO实例来创建消息活动。</p>
+<p>例如，一个运行在eventlet网络服务器上的应用，使用了Redis消息队列，下面的Python脚本将向所有的客户端广播一个消息活动。</p>
+<div class="highlight"><pre><span></span>socketio=SocketIO(message_queue=&#39;redis://&#39;)
+socketio.emit(&#39;my event&#39;, {&#39;data&#39;: &#39;foo&#39;}, namespace=&#39;/test&#39;)
+</pre></div>
+
+
+<p>当使用这种方法引用SocketIO实例，Flask应用实例将不会传递到构造函数。</p>
+<p>当SocketIO通过消息队列使用参数channel来选择一个具体channel的对话。当很多独立的SocketIO服务公用一个队列的时候，使用一个自定义的channel名称将是很有必要的。</p>
+<p>Flask-SocketIO并没有在使用eventlet或者gevent时应用猴子(monkey)来修补。但是当使用消息队列的时候，如果Python标准库没有使用猴子来修补，那么消息队列服务的Python包很可能会挂起。</p>
+<p>很重要的一点是：外部进程想连接到SocketIO服务器并不需要像主服务器那样使用eventlet或者gevent。使一个服务器使用了协同框架，外部进程不是一个阻力。例如，Celery工作站并不需要配置使用eventlet或者gevent，是因为主服务器已经有了。但是，如果你的外部进程因为某种原因
+使用了协同框架，那么monkey修复就很可能是需要的，那么消息队列就可以获得协同友好的函数和类。</p>
+<h2>19.从Flask-SocketIO 0.x 升级到 1.x 和 2.x 版本</h2>
+<p>老版本的Flask-SocketIO有完全不同的一系列依赖包。老版本依赖gevent-socketio和gevent-websocket，这些包 1.0 版本都不需要了。</p>
+<p>尽管依赖的改变，但是 1.0 版本却没有太多重要的改变。下面是一个实际改变的详细的清单：
+<em> 1.0 版本放弃支持Python 2.6，增加了对Python 3.3, Python 3.4 和 pypy 的支持。
+</em> 0.x 版本需要老版本的Socket.IO javascript客户端。从 1.0 版本开始，支持新发布的Socket.IO和Engin.IO。1.0版本以前的Socket.IO将不再被支持。Swift和C++官方的Socket.IO客户端也被支持。
+<em> 0.x 版本依赖gevent，gevent-socketio和gevent-websocket.1.0 版本以后将不再使用。在Flask开发的网络服务器中，gevent是三种后端网络服务器选择之一，另外两个是eventlet和其它常规多线程WSGI服务器。
+</em> Socket.IO服务器选项在 1.0 版本中也有所改变。它们可以由SocketIO构造函数来提供，或者由<code>run()</code>调用。这些选项在使用前在这两者中被合并。
+<em> 0.x 版本暴露了gevent-socketio在连接中作为<code>request.namespace</code>。在 1.0 版本中它不再被使用。这个请求对象定义了<code>request.namespace</code>作为待处理的命令空间。并且增加了<code>request.aid</code>，为客户端连接定义了一个独有的会话ID，<code>request.event</code>包含了活动名称和参数。
+</em> 为了获得房间列表，0.x版本需要应用使用私有gevent-socketio结构，包含<code>request.namespace.rooms</code>表达式。这是在 1.0 版本中将不再出现，因为它包含了一个合适的<code>room()</code>函数。
+<em> 这个推荐的“把戏(trick)”发送消息到一个独立的客户端将消息分发到每个客户端所在的独立的房间内，这个地址消息对应着目的房间(desired room)。这个特性在 1.0 版本中被正式化了，当客户端连接到服务器时，它会立即自动地被分配到一个特定的房间内。
+</em> 全局命名空间的<code>connect</code>活动在 1.0 版本之前并没有被触发。这bug已经被修复了并且按照预期触发。
+* 在 1.0 版本增加了对客户端的回调函数的支持。</p>
+<p>为了升级到新的Flask-SocketIO版本，你需要升级你的Socket.IO客户端到兼容Socket.IO 1.0 协议。对于Javascript客户端，1.3.x和1.4.x版本经过充分地测试，发现是兼容的。</p>
+<p>在服务端，有一些要点是要被考虑到的：
+<em> 如果你想继续使用gevent，那么gevent-socketio需要从你的虚拟环境中卸载，因为这个包将不再需要并且可能会与它的替代——python-socketio相冲突。
+</em> 如果你想轻微地提高性能和稳定性，那么推荐你转而使用eventlet。为了做到这一点，需要卸载gevent、gevent-socketio和gevent-websocket，然后安装eventlet。
+<em> 如果你的应用使用了猴子修复了并转向了eventlet，需要调用<code>eventlet.monkey_patch()</code>来代替gevent中的<code>monkey.patch_all()</code>。此外，任何对gevent的调用必须被同等条件下的对eventlet调用替代。
+</em> 任何使用<code>request.namespace</code>需要被直接调用Flask-SocketIO函数替代。例如，<code>request.namespace.rooms</code>要用<code>rooms()</code>函数替换。
+* 任何使用内置的gevent-socketio的对象都必须被去除，当这个包不再是所需的依赖的时候。</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-webkai-fa.html">Python Web开发</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/flask.html">flask</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

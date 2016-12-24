@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, datetime">
+
+  <title>
+    PyCN技术评论
+&ndash; Python时间处理完全手册  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/Python时间处理完全手册-gw1770df.html">Python时间处理完全手册</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：gw1770df</h4>
+<p>处理时间是工作中非常常见的操作，最基本的获取当前时间,格式化时间,计算两个时间差,时间戳转换等等.
+Python内置两个非常常用的时间处理库 <code>time</code> 和 <code>datetime</code>，足以满足工作中的各种需求。
+<code>datetime</code> 功能更加强大, <code>time</code> 库就较为简练一些。
+两个库互补使用，所有问题迎刃而解。</p>
+<p>官方文档Py2.7 <a href="https://docs.python.org/2/library/datetime.html?highlight=datetime#module-datetime">datetime</a> 和 <a href="https://docs.python.org/2/library/time.html?highlight=time#module-time">time</a>
+<!--more--></p>
+<p>== 注意time 或者 datetime 库需要提前import ==</p>
+<p>WIKI：
+<a href="https://zh.wikipedia.org/zh-cn/UNIX%E6%97%B6%E9%97%B4">时间戳 UNIX时间</a>
+<a href="https://zh.wikipedia.org/zh-cn/%E5%90%84%E5%9C%B0%E6%97%A5%E6%9C%9F%E5%92%8C%E6%97%B6%E9%97%B4%E8%A1%A8%E7%A4%BA%E6%B3%95">各地日期和时间表示法</a>
+<a href="https://zh.wikipedia.org/wiki/%E6%97%B6%E5%8C%BA">时区</a></p>
+<h3>1. 获取并格式化时间</h3>
+<p>使用<code>time</code>模块获取当前时间</p>
+<div class="highlight"><pre><span></span>print time.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;)
+# Out: &#39;2016-12-01 16:10:27&#39;
+</pre></div>
+
+
+<p>使用<code>datetime</code>模块获取当前日期和当前时间</p>
+<div class="highlight"><pre><span></span># 获取当前日期
+today = datetime.date.today()
+print today.strftime(&#39;%Y-%m-%d&#39;)
+# Out: &#39;2016-12-01&#39;  # 获取当前日期
+
+now = datetime.datetime.now()
+print now.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;)
+# Out: &#39;2016-12-01 16:14:22&#39; # 获取当前日期时间
+</pre></div>
+
+
+<h3>2. 转换时间格式</h3>
+<p>例如我们拿到了一个时间字符串 <code>161201 16:14:22</code> 需要将其转换成其他格式。</p>
+<div class="highlight"><pre><span></span>struct_time = time.strptime(&#39;161201 16:14:22&#39;, &#39;%y%m%d %H:%M:%S&#39;)
+# struct_time 为一个时间元组对象
+print time.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;, struct_time)
+# Out: &#39;2016-12-01 16:14:22&#39;
+</pre></div>
+
+
+<div class="highlight"><pre><span></span>dt = datetime.datetime.strptime(&#39;161201 16:14:22&#39;, &#39;%y%m%d %H:%M:%S&#39;)
+# dt 为 datetime.datetime对象  # 通过调用 timetuple()方法将datetime.datetime对象转化为时间元组
+print dt.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;)
+# Out: &#39;2016-12-01 16:14:22&#39;
+</pre></div>
+
+
+<h3>3. 计算两个时间间隔</h3>
+<p>计算时间间隔使用<code>datetime</code>模块比较方便。
+datetime.date为日期对象，最小精度为天。
+datetime.datetime为日期时间对象，最小精度为妙（毫秒也可以）
+实际使用中按需选择。</p>
+<ol>
+<li>计算2016-12-1和1990-1-1中间天数和秒数
+ <code># 将字符串转换为datetime.date对象
+ dt_a = datetime.datetime.strptime('2016-12-1', '%Y-%m-%d') # datetime.date 无 strptime 方法
+ dt_b = datetime.datetime.strptime('1990-1-1', '%Y-%m-%d') # 虽然格式化时间的时候%m为两位数月份
+                                                            # 但是反格式化时一位月份也可工作
+ dt = dt_a - dt_b
+ dt.days # 为 间隔天数
+ dt.total_seconds() # 为 间隔秒数</code></li>
+</ol>
+<p><code>dt = datetime.date(2016,12,1) - datetime.date(1990,1,1)
+ dt.days # 间隔天数</code></p>
+<ol>
+<li>计算两个时间戳间隔时间
+ <code>timestamp_a, timestamp_b = 1480582517, 1480472517
+ dt = datetime.datetime.fromtimestamp(timestamp_a) - datetime.datetime.fromtimestamp(timestamp_b)
+ print dt.days, dt.total_seconds()
+ # Out: 1 110000.0</code></li>
+</ol>
+<h4>4. 获取前N天，或者后N天时间</h4>
+<p>datetime.timedelta([days[, seconds[, microseconds[, milliseconds[, minutes[, hours[, weeks]]]]]]])</p>
+<div class="highlight"><pre><span></span>now = datetime.datetime.now()
+before_time = now - datetime.timedelta(days=1)
+after_time = now + datetime.timedelta(days=1)
+print before_time
+# Out: 2016-11-30 17:03:40.420000
+print after_time
+# Out: 2016-12-02 17:03:40.420000
+</pre></div>
+
+
+<h4>5. 时间戳相关计算</h4>
+<p>时间戳是指格林威治时间1970年01月01日00时00分00秒(北京时间1970年01月01日08时00分00秒)起至现在的总秒数。
+通过时间戳可以快速直接得到很多信息</p>
+<div class="highlight"><pre><span></span>ts = int(time.time()) # ts = 1480583196
+print ts / 86400 % 7 + 3 # 获取时间戳对应的星期 0 周日 - 6 周六
+# Out: 3 # 周四
+# ===============
+timestamp_a, timestamp_b = 1480582517, 1480472517
+ts = timestamp_a - timestamp_b
+print ts / 86400 # 获取两个时间戳相隔天数
+# ===============
+# 获取当天00:00:00的时间戳
+ts = int(time.time())
+print ts / 86400 * 86400
+# Out: 1480550400
+# ===============
+# 获取当天23:59:59的时间戳
+ts = int(time.time())
+print ts / 86400 * 86400 + 86400 - 1
+# Out: 1480636799
+</pre></div>
+
+
+<p>个人认为时间戳才是最有魅力的</p>
+<h3>6. 各种数据类型间转换</h3>
+<ol>
+<li>
+<p>str &gt; datetime.datetime
+ <code>datetime.datetime.strptime('161201 16:14:22', '%y%m%d %H:%M:%S')</code></p>
+</li>
+<li>
+<p>str &gt; 时间元组
+ <code>dt = datetime.datetime.strptime('161201 16:14:22', '%y%m%d %H:%M:%S')
+ dt.timetuple()
+ # or
+ struct_time = time.strptime('161201 16:14:22', '%y%m%d %H:%M:%S')</code></p>
+</li>
+<li>
+<p>时间戳 &gt; datetime.datetime 或 datetime.date
+ <code>datetime.datetime.fromtimestamp(时间戳)
+ # or
+ datetime.date.fromtimestamp(时间戳)</code></p>
+</li>
+<li>
+<p>时间戳 &gt; 时间元组
+ <code>time.gmtime(时间戳)</code></p>
+</li>
+<li>
+<p>时间元组 &gt; 时间戳
+ <code>time.mktime(时间戳)</code></p>
+</li>
+<li>
+<p>时间元组 &gt; datetime.datetime 或 datetime.date
+ <code>datetime.datetime.fromtimestamp(time.mktime(时间元组))
+ # or
+ datetime.date.fromtimestamp(time.mktime(时间元组))</code></p>
+</li>
+<li>
+<p>时间戳 &gt; 时间元组
+ <code>time.gmtime(时间戳)
+ # or
+ dt = datetime.datetime.fromtimestamp(时间戳)
+ dt.timetuple()</code></p>
+</li>
+</ol>
+<h3>格式化与反格式化控制字符对照表</h3>
+<table>
+<thead>
+<tr>
+<th>字符</th>
+<th>含义</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>%a</td>
+<td>当地格式的星期缩写</td>
+<td>Sun,Mon...Sat(en_US);So,Mo...Sa(de_DE)</td>
+</tr>
+<tr>
+<td>%A</td>
+<td>当地格式的星期全拼</td>
+<td>Sunday,Monday...Saturday(en_US);Sonntag,Montag...Samstag(de_DE)</td>
+</tr>
+<tr>
+<td>%w</td>
+<td>星期的数字表示0表示周日,6表示周六</td>
+<td>0,1...6</td>
+</tr>
+<tr>
+<td>%d</td>
+<td>日,当月第几天,两位数</td>
+<td>01,02...31</td>
+</tr>
+<tr>
+<td>%b</td>
+<td>当地格式的月份缩写</td>
+<td>Jan,Feb...Dec(en_US);Jan,Feb...Dez(de_DE)</td>
+</tr>
+<tr>
+<td>%B</td>
+<td>当地格式的月份全拼</td>
+<td>January, February,...,December(en_US);Januar,Februar...Dezember(de_DE)</td>
+</tr>
+<tr>
+<td>%m</td>
+<td>月份的数字表示,两位数</td>
+<td>01,02...12</td>
+</tr>
+<tr>
+<td>%y</td>
+<td>年份表示,不带世纪,两位数</td>
+<td>00,01...99</td>
+</tr>
+<tr>
+<td>%Y</td>
+<td>年份表示</td>
+<td>1970,1971...2016</td>
+</tr>
+<tr>
+<td>%H</td>
+<td>小时 0-23</td>
+<td>00,01...23</td>
+</tr>
+<tr>
+<td>%I</td>
+<td>小时 01-12</td>
+<td>01,02...12</td>
+</tr>
+<tr>
+<td>%p</td>
+<td>当地格式的上午下午表示</td>
+<td>AM,PM(en_US);am,pm(de_DE)</td>
+</tr>
+<tr>
+<td>%M</td>
+<td>分钟,两位数</td>
+<td>00,01...59</td>
+</tr>
+<tr>
+<td>%S</td>
+<td>秒,两位数</td>
+<td>00,01...59</td>
+</tr>
+<tr>
+<td>%f</td>
+<td>微妙,六位数</td>
+<td>000000,000001...999999</td>
+</tr>
+<tr>
+<td>%z</td>
+<td>时区偏移量,表示为+HHMM或-HHMM或空</td>
+<td>(空),+0000,-0400,+0800</td>
+</tr>
+<tr>
+<td>%Z</td>
+<td>时区名字</td>
+<td>(空),UTC, EST, CST</td>
+</tr>
+<tr>
+<td>%j</td>
+<td>日,当年第几天,三位数</td>
+<td>001,002...366</td>
+</tr>
+<tr>
+<td>%U</td>
+<td>周,在年第几周,周日为一周的第一天,新年第一个星期日第0周,两位数</td>
+<td>00,01...53</td>
+</tr>
+<tr>
+<td>%W</td>
+<td>周,在年第几周,周一为一周的第一天,新年第一个星期一第0周,两位数</td>
+<td>00,01...53</td>
+</tr>
+<tr>
+<td>%c</td>
+<td>当地格式的时间日期表示</td>
+<td>Tue Aug 16 21:30:00 1988 (en_US);Di 16 Aug 21:30:00 1988 (de_DE)</td>
+</tr>
+<tr>
+<td>%x</td>
+<td>当地格式的日期表示</td>
+<td>08/16/88 (None);08/16/1988 (en_US);16.08.1988 (de_DE)</td>
+</tr>
+<tr>
+<td>%X</td>
+<td>当地格式的时间表示</td>
+<td>21:30:00 (en_US);21:30:00 (de_DE)</td>
+</tr>
+<tr>
+<td>%%</td>
+<td>%字符</td>
+<td>%</td>
+</tr>
+</tbody>
+</table>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-ji-chu-zhi-shi.html">Python 基础知识</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/datetime.html">datetime</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

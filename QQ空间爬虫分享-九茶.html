@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, 爬虫, QQ空间">
+
+  <title>
+    PyCN技术评论
+&ndash; QQ空间爬虫分享  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/QQ空间爬虫分享-九茶.html">QQ空间爬虫分享</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：九茶</h4>
+<h2><strong>前言：</strong></h2>
+<p>上一篇文章：<a href="http://blog.csdn.net/bone_ace/article/details/50771839">《QQ空间爬虫分享（一天可抓取 400 万条数据）》</a>
+Github地址：<a href="https://github.com/LiuXingMing/QQSpider">QQSpider</a>
+Q群讨论：<a target="_blank" href="http://shang.qq.com/wpa/qunwpa?idkey=d3bd977692493ea2764aec73f6ead724e3b339c2e4f3999383331a0fab20e2a9"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="QSpider" title="QSpider"></a></p>
+<p>很抱歉QQSpider这个爬虫过了这么久才作更新，同时也很感谢各位同学的肯定和支持！
+<strong>这次主要替换了程序里一些不可用的链接，对登录时的验证码作了处理，对去重队列作了优化。并且可以非常简单地实现爬虫分布式扩展。</strong></p>
+<p></br>
+</br></p>
+<h2><strong>使用说明：</strong></h2>
+<p>启动前配置：</p>
+<ol>
+<li>需要安装的软件：python、Redis、MongoDB（Redis和MongoDB都是NoSQL，服务启动后能连接上就行，不需要建表什么的）。</li>
+<li>需要安装的Python模块：requests、BeautifulSoup、multiprocessing、selenium、itertools、redis、pymongo。</li>
+<li>我们登陆QQ要使用到phantomJS（下载地址：<a href="http://phantomjs.org/download.html">http://phantomjs.org/download.html</a>），下载完将里面的 phantomjs.exe 解压到python目录下即可。</li>
+</ol>
+<hr />
+<p>启动程序：</p>
+<ol>
+<li>进入 myQQ.txt 写入QQ账号和密码（不同QQ换行输入，账号密码空格隔开）。如果你只是测试一下，则放三两个QQ足矣；但如果你开多线程大规模抓取的话就要用多一点QQ号（thread_num_QQ的2~10倍），账号少容易被检测为异常行为。</li>
+<li>进入 init_messages.py 进行爬虫参数的配置，例如线程数量的多少、设置爬哪个时间段的日志，哪个时间段的说说，爬多少个说说备份一次等等。</li>
+<li>运行 launch.py 启动爬虫。</li>
+</ol>
+<p></br>
+</br></p>
+<h2><strong>代码说明：</strong></h2>
+<ol>
+<li>mongodb用来存放数据，redis用来存放待爬QQ和Cookie。</li>
+<li>爬虫之前使用的是BitVector去重，有一部分人反映经常会报错，所以现在使用基于Redis的位去重，内存占用不超过512M，能容纳45亿个QQ号瞬间去重，而且方便分布式扩展。</li>
+<li>爬虫使用phantomJS模拟登陆QQ空间，有时候会出现验证码。我使用的是云打码（自行百度），准确率还是非常高的，QQ验证码是4位纯英文，5元可以识别1000个验证码。如果需要请自行去注册购买，将账号、密码、appkey填入 yundama.py，再将 public_methods.py 里的<code>dama=False</code>改成<code>dama=True</code>即可。</li>
+<li>分布式。现在已经将种子队列和去重队列都放在了Redis上面，如果需要几台机器同时爬，只需要将代码复制一份到另外一台机子，将连Redis时的<code>localhost</code>改成同一台机器的IP即可。如果想要将爬下来的数据保存到同一台机，也只需要将连MongoDB时的<code>localhost</code>改成该机器的IP即可。</li>
+<li>为了让程序不那么复杂难懂，此项目只用了多线程，即只用到了一个CPU。如果实际生产运行的话可以考虑将程序稍作修改，换成多进程+协程，或者异步。速度会快很多。</li>
+<li>最后提醒一下，爬虫无非就是模仿人在浏览器上网的行为，你在浏览器上无法查看的信息爬虫一般也是无法抓取。所以，就不要再问我能不能破解别人相册的这种问题了，空间加了访问权限的也无法访问。程序输出的日志中<code>2016-11-19 01:05:33.010000 failure:484237103 (None - http://user.qzone.qq.com/484237103)</code>这种，一般就是无法访问的QQ。还有，我们是无法查看一个QQ的所有好友的，所以爬下来的好友信息也只是部分好友。爬虫不是黑客，希望理解。</li>
+</ol>
+<p></br>
+</br></p>
+<h2><strong>结语：</strong></h2>
+<ul>
+<li>爬虫是偏后台型的任务，以抓取效率为主，并没有很好的用户界面，并且需要不断地维护。所以对于完全没有编程基础的人来说，可能会遇到各种各样的问题。此项目最初的目的是为大家提供QQ空间爬虫的一种架构，并不保证程序一直能跑。只要腾讯服务器端稍有变动，例如某一个链接变了，可能程序就抓不到数据了，此时程序也要相应地将链接换成新的，如果网页结构变了，解析规则也要相应地修改。</li>
+<li>有同学反映，爬QQ空间的很多都是学生想爬一些数据做统计研究的，本不是计算机专业，爬起来比较困难，希望有现成的数据出售。但是因为工作变动，其实今年3月份 程序开发完后我就没有跑过了，所以手上也没有数据。不过接下来我会开一两台机器跑这个爬虫，如果需要数据可以邮件联系我（bone_ace@163.com）。</li>
+<li>有什么问题请尽量留言，方便后来遇到同样问题的同学查看。</li>
+</ul>
+<p></br>
+</br>
+转载请注明出处，谢谢！（原文链接：<a href="http://blog.csdn.net/bone_ace/article/details/53213779">http://blog.csdn.net/bone_ace/article/details/53213779</a>）</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-wang-luo-pa-chong.html">Python 网络爬虫</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/pa-chong.html">爬虫</a>,      <a href="https://pycntech.github.io/tag/qqkong-jian.html">QQ空间</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

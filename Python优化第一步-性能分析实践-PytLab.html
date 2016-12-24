@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, 性能优化">
+
+  <title>
+    PyCN技术评论
+&ndash; Python优化第一步-性能分析实践  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/Python优化第一步-性能分析实践-PytLab.html">Python优化第一步-性能分析实践</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：PytLab</h4>
+<h2>前言</h2>
+<blockquote>
+<p>We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil. -- Donald Knuth</p>
+</blockquote>
+<p>先扔上一句名言来镇楼。</p>
+<p>当我们的确是有需要开始真正优化我们的Python程序的时候，我们要做的第一步并不是盲目的去做优化，而是对我们现有的程序进行分析，发现程序的性能瓶颈进而进行针对性的优化。这样才会使我们花时间和精力去做的优化获得最大的效果。</p>
+<p>本文主要介绍Python内置的性能分析器的优雅使用方法，并以作者的一个化学动力学的程序为例子进行性能分析实践, 介绍了常用的性能分析可视化工具的使用，最后对Python程序进行初步的性能优化尝试。</p>
+<!-- more -->
+
+<h2>正文</h2>
+<h3>关于性能分析</h3>
+<p>性能分析就是分析代码和正在使用的资源之间有着怎样的联系，它可以帮助我们分析运行时间从而找到程序运行的瓶颈，也可以帮助我们分析内存的使用防止内存泄漏的发生。</p>
+<p>帮助我们进行性能分析的工具便是性能分析器，它主要分为两类：
+1. 基于事件的性能分析(event-based profiling)
+2. 统计式的性能分析(statistical profiling)</p>
+<p>关于性能分析详细的概念参考: <a href="https://zh.wikipedia.org/wiki/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90">性能分析-维基百科</a></p>
+<h3>Python的性能分析器</h3>
+<p>Python中最常用的性能分析工具主要有：cProfiler, line_profiler以及memory_profiler等。他们以不同的方式帮助我们分析Python代码的性能。我们这里主要关注Python内置的cProfiler，并使用它帮助我们分析并优化程序。</p>
+<h3>cProfiler</h3>
+<h4>快速使用</h4>
+<p>这里我先拿上官方文档的一个简单例子来对cProfiler的简单使用进行简单介绍。</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cProfile</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="n">cProfile</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s1">&#39;re.compile(&quot;foo|bar&quot;)&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>分析结果：</p>
+<div class="highlight"><pre><span></span>  197 function calls (192 primitive calls) in 0.002 seconds
+
+Ordered by: standard name
+
+ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1    0.000    0.000    0.001    0.001 &lt;string&gt;:1(&lt;module&gt;)
+     1    0.000    0.000    0.001    0.001 re.py:212(compile)
+     1    0.000    0.000    0.001    0.001 re.py:268(_compile)
+     1    0.000    0.000    0.000    0.000 sre_compile.py:172(_compile_charset)
+     1    0.000    0.000    0.000    0.000 sre_compile.py:201(_optimize_charset)
+     4    0.000    0.000    0.000    0.000 sre_compile.py:25(_identityfunction)
+   3/1    0.000    0.000    0.000    0.000 sre_compile.py:33(_compile)
+</pre></div>
+
+
+<p>从分析报告结果中我们可以得到很多信息：
+1. 整个过程一共有197个函数调用被监控，其中192个是原生调用（即不涉及递归调用）
+2. 总共执行的时间为0.002秒
+3. 结果列表中是按照标准名称进行排序，也就是按照字符串的打印方式（数字也当作字符串）
+4. 在列表中：
+    - <code>ncalls</code>表示函数调用的次数（有两个数值表示有递归调用，总调用次数/原生调用次数）
+    - <code>tottime</code>是函数内部调用时间（不包括他自己调用的其他函数的时间）
+    - <code>percall</code>等于 <code>tottime</code>/<code>ncalls</code>
+    - <code>cumtime</code>累积调用时间，与tottime相反，它包含了自己内部调用函数的时间
+    - 最后一列，文件名，行号，函数名</p>
+<h4>优雅的使用</h4>
+<p>Python给我们提供了很多接口方便我们能够灵活的进行性能分析，其中主要包含两个类cProfile模块的<code>Profile</code>类和pstat模块的<code>Stats</code>类。</p>
+<p>我们可以通过这两个类来将代码分析的功能进行封装以便在项目的其他地方能够灵活重复的使用进行分析。</p>
+<p>这里还是需要对<code>Profile</code>以及<code>Stats</code>的几个常用接口进行简单总结：</p>
+<ul>
+<li>
+<p><code>Profile</code>类:</p>
+<ul>
+<li><code>enable()</code>: 开始收集性能分析数据</li>
+<li><code>disable()</code>: 停止收集性能分析数据</li>
+<li><code>create_stats()</code>: 停止收集分析数据，并为已收集的数据创建<code>stats</code>对象</li>
+<li><code>print_stats()</code>: 创建stats对象并打印分析结果</li>
+<li><code>dump_stats(filename)</code>: 把当前性能分析的结果写入文件(二进制格式)</li>
+<li><code>runcall(func, *args, **kwargs)</code>: 收集被调用函数<code>func</code>的性能分析数据</li>
+</ul>
+</li>
+<li>
+<p><code>Stats</code>类
+    pstats模块提供的<code>Stats</code>类可以帮助我们读取和操作stats文件（二进制格式）
+    <code>python
+    import pstats
+    p = pstats.Stats('stats.prof')</code>
+    <code>Stats</code>类可以接受stats文件名，也可以直接接受<code>cProfile.Profile</code>对象作为数据源。</p>
+<ul>
+<li><code>strip_dirs()</code>: 删除报告中所有函数文件名的路径信息</li>
+<li><code>dump_stats(filename)</code>: 把stats中的分析数据写入文件（效果同<code>cProfile.Profile.dump_stats()</code>)</li>
+<li><code>sort_stats(*keys)</code>: 对报告列表进行排序，函数会依次按照传入的参数排序，关键词包括<code>calls</code>, <code>cumtime</code>等，具体参数参见https://docs.python.org/2/library/profile.html#pstats.Stats.sort_stats</li>
+<li><code>reverse_order()</code>: 逆反当前的排序</li>
+<li><code>print_stats(*restrictions)</code>: 把信息打印到标准输出。<code>*restrictions</code>用于控制打印结果的形式, 例如<code>(10, 1.0, ".*.py.*")</code>表示打印所有py文件的信息的前10行结果。</li>
+</ul>
+</li>
+</ul>
+<p>有了上面的接口我们便可以更<strong>优雅</strong>的去使用分析器来分析我们的程序，例如可以通过写一个<strong>带有参数的装饰器</strong>，这样想分析项目中任何一个函数，便可方便的使用装饰器来达到目的。</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cProfile</span>
+<span class="kn">import</span> <span class="nn">pstats</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c1"># 性能分析装饰器定义</span>
+<span class="k">def</span> <span class="nf">do_cprofile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decorator for function profiling.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">profiled_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+            <span class="c1"># Flag for do profiling or not.</span>
+            <span class="n">DO_PROF</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;PROFILING&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">DO_PROF</span><span class="p">:</span>
+                <span class="n">profile</span> <span class="o">=</span> <span class="n">cProfile</span><span class="o">.</span><span class="n">Profile</span><span class="p">()</span>
+                <span class="n">profile</span><span class="o">.</span><span class="n">enable</span><span class="p">()</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">profile</span><span class="o">.</span><span class="n">disable</span><span class="p">()</span>
+                <span class="c1"># Sort stat by internal time.</span>
+                <span class="n">sortby</span> <span class="o">=</span> <span class="s2">&quot;tottime&quot;</span>
+                <span class="n">ps</span> <span class="o">=</span> <span class="n">pstats</span><span class="o">.</span><span class="n">Stats</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span><span class="o">.</span><span class="n">sort_stats</span><span class="p">(</span><span class="n">sortby</span><span class="p">)</span>
+                <span class="n">ps</span><span class="o">.</span><span class="n">dump_stats</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">profiled_func</span>
+    <span class="k">return</span> <span class="n">wrapper</span>
+</pre></div>
+
+
+<p>这样我们可以在我们想进行分析的地方进行性能分析, 例如我想分析我的<code>MicroKineticModel</code>类中的<code>run</code>方法：</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MicroKineticModel</span><span class="p">(</span><span class="n">km</span><span class="o">.</span><span class="n">KineticModel</span><span class="p">):</span>
+    <span class="c1"># ...</span>
+
+    <span class="c1"># 应用装饰器来分析函数</span>
+    <span class="nd">@do_cprofile</span><span class="p">(</span><span class="s2">&quot;./mkm_run.prof&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># ...</span>
+</pre></div>
+
+
+<p>装饰器函数中通过<code>sys.getenv</code>来获取环境变量判断是否需要进行分析，因此可以通过设置环境变量来告诉程序是否进行性能分析:</p>
+<div class="highlight"><pre><span></span>export PROFILING=y
+
+# run the program...
+</pre></div>
+
+
+<p>程序跑完后便会在当前路径下生成mkm_run.prof的分析文件，我们便可以通过打印或者可视化工具来对这个函数进行分析。</p>
+<h3>性能分析实践</h3>
+<p>下面我就通过分析自己的动力学程序中<code>MicroKineticModel</code>类中的方法来进行实践，并使用常用的几种性能分析可视化工具来帮助分析并进行初步的优化和效率对比。</p>
+<p>注： 本次测试的程序主要包含数值求解微分方程以及牛顿法求解多元非线性方程组的求解，其中程序中的公式推导部分全部通过字符串操作完成。</p>
+<h4>生成性能分析报告</h4>
+<p>按照上文的方法，我们通过装饰器对<code>run</code>方法进行修饰来进行性能分析，这样我们便可以像正常一样去跑程序，但是不同的是当前路径下会生成性能分析报告文件。</p>
+<div class="highlight"><pre><span></span># 设置环境变量
+export PROFILING=y
+
+# 执行运行脚本
+python run.py
+</pre></div>
+
+
+<p>在看似正常的运行之后，在当前路径下我们会生成一个分析报告, <code>mkm_run.prof</code>, 它是一个二进制文件，我们需要用python的pstats模块的接口来读取。</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/print_stats.png" /></p>
+<p>我们只按照累积时间进行降序排序并输出了前十行，整个函数只运行了0.106秒。可见程序大部分时间主要花在牛顿法求解的过程中，其中获取解析Jacobian Matrix的过程是一个主要耗时的部分。</p>
+<p>虽然我们可以通过命令行查看函数调用关系，但是我并不想花时间在反人类的黑白框中继续分析程序，下面我打算上直观的可视化工具了。</p>
+<h4>分析数据可视化</h4>
+<h4>prof2dot</h4>
+<p>Gprof2Dot可将多种Profiler的数据转成Graphviz可处理的图像表述。配合dot命令，即可得到不同函数所消耗的时间分析图。具体使用方法详见: https://github.com/jrfonseca/gprof2dot</p>
+<p>因此我们可以利用它来为我们的程序生成分析图:</p>
+<div class="highlight"><pre><span></span>gprof2dot -f pstats mkm_run.prof | dot -Tpng -o mkm_run.png
+</pre></div>
+
+
+<p>于是我们路径下面就生成了mkm_run.png</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/gprof2dot.png" /></p>
+<p>我倒是蛮喜欢这个时间分析图，顺着浅色方格的看下去很容易发现程序的瓶颈部分，
+- 每个node的信息如下:
+    <code>+------------------------------+
+    |        function name         |
+    | total time % ( self time % ) |
+    |         total calls          |
+    +------------------------------+</code>
+- 每个edge的信息如下:
+    <code>total time %
+                  calls
+    parent --------------------&gt; children</code></p>
+<h4>vprof</h4>
+<p>也是一个不错的工具来提供交互式的分析数据可视化，详情参见: https://github.com/nvdv/vprof</p>
+<p>他是针对文件进行执行并分析，并在浏览器中生成可视化图标</p>
+<div class="highlight"><pre><span></span># 生成CPU flame图
+vprof -c c run.py
+</pre></div>
+
+
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/vprof.png" /></p>
+<h4>RunSnakeRun</h4>
+<p>RunSnakeRun是另一个可对性能分析结果进行可视化的工具，它使用wxPython讲Profiler的数据可视化</p>
+<div class="highlight"><pre><span></span>runsnake mkm_run.prof
+</pre></div>
+
+
+<p>效果图:</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/runsnakerun.png" /></p>
+<h4>KCacheGrind &amp; pyprof2calltree</h4>
+<p>KCacheGrind是Linux中常用的分析数据可视化软件，他默认处理valgrind的输出，但是我们结合<a href="https://pypi.python.org/pypi/pyprof2calltree/">pyprof2calltree</a>工具可以把cProfile的输出转换成KCacheGrind支持的格式。</p>
+<div class="highlight"><pre><span></span>pyprof2calltree -i mkm_run.prof -k  # 转换格式并立即运行KCacheGrind
+</pre></div>
+
+
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/KCacheGrind.png" /></p>
+<h3>初步优化</h3>
+<p>通过直观的可视化工具我们可以迅速找到程序中可以优化的部分，</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/opt.png" /></p>
+<p>可以看到我们在求解Jacobian矩阵的时候，会调用很多次求导函数，并且占据了比较大的时间，于是我们可以尝试通过<strong>函数返回值缓存</strong>的方式进行初步优化。</p>
+<p>为了能将函数的返回值进行缓存，我们添加了一个描述符:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Memoized</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">cls</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instance</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</pre></div>
+
+
+<p>这样，在我们需要进行返回值缓存的函数上面使用此描述符，便可以将返回值缓存到描述符对象中，当我们使用相同参数进行重复调用时候，便可以直接返回数值，复杂度将为O(1)。</p>
+<div class="highlight"><pre><span></span><span class="nd">@Memoized</span>
+<span class="k">def</span> <span class="nf">poly_adsorbate_derivation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adsorbate_name</span><span class="p">,</span> <span class="n">poly_expression</span><span class="p">):</span>
+    <span class="c1"># ...</span>
+</pre></div>
+
+
+<p>优化后我们再来进行一次分析:</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/after_opt.png" /></p>
+<p>同一个函数，运行时间从<strong>0.106秒</strong>降到了<strong>0.061</strong>秒效率提升近了<strong>40%!</strong></p>
+<p>看一下函数调用关系图:</p>
+<p><img alt="" src="/assets/images/blog_img/2016-12-20-Python优化第一步-性能分析实践/calltree_opt.png" /></p>
+<p>而且函数调用次数明显减少了，可以看到<code>poly_adsorbate_derivation</code>的调用次数从36次降到了9次，<code>__total_term_adsorbate_derivation</code>从192次降到了48次。</p>
+<h2>总结</h2>
+<p>本文对Python内置的性能分析器cProfile的使用进行了介绍，并以作者项目中的代码为例进行了实例分析和数据可视化，并使用了缓存的方式对Python程序进行了初步的优化，希望能借此帮助大家熟悉工具并分析自己Python程序性能的瓶颈写出更好更高效的Python程序。</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-ji-chu-zhi-shi.html">Python 基础知识</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/xing-neng-you-hua.html">性能优化</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

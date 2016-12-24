@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, 爬虫, 新浪微博">
+
+  <title>
+    PyCN技术评论
+&ndash; 新浪微博爬虫分享  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/新浪微博爬虫分享-九茶.html">新浪微博爬虫分享</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：九茶</h4>
+<h2><strong>前言：</strong></h2>
+<p>上篇文章：<a href="http://blog.csdn.net/bone_ace/article/details/50903178">《新浪微博爬虫分享（一天可抓取 1300 万条数据）》</a>、<a href="http://blog.csdn.net/bone_ace/article/details/50904718">《新浪微博分布式爬虫分享》</a>
+Github地址：<a href="https://github.com/LiuXingMing/SinaSpider">SinaSpider</a></p>
+<p>更新完<a href="http://blog.csdn.net/bone_ace/article/details/53213779">《QQ空间爬虫分享（2016年11月18日更新）》</a>，现在将新浪微博爬虫的代码也更新一下吧。</p>
+<p><strong>这次主要对爬虫的种子队列和去重策略作了优化，并更新了Cookie池的维护，只需拷贝代码即可实现爬虫分布式扩展，适合大规模抓取。</strong>
+<br/><br/></p>
+<h2><strong>使用说明：</strong></h2>
+<ol>
+<li>需要安装的软件：Python2、Redis、MongoDB； 需要安装的Python模块：scrapy、requests、lxml。</li>
+<li>进入cookies.py，填入你的微博账号（已有两个账号示例）。</li>
+<li>进入settings.py，如果你填入的账号足够多，可以将<code>DOWNLOAD_DELAY = 10</code> 和 <code>CONCURRENT_REQUESTS = 1</code>注释掉。另外可以修改存放种子和去重队列的机器，可以存放在两台不同的机器上面。</li>
+<li>运行launch.py启动爬虫，也可在命令行执行<code>scrapy crawl SinaSpider</code>（Linux只能采用后者）。</li>
+<li>分布式扩展：将代码拷贝到一台新机器上，运行即可。注意各子爬虫要共用一个去重队列，即将settings.py里面的<code>FILTER_HOST</code>设成同一台机的IP。
+<br/><br/></li>
+</ol>
+<h2><strong>代码说明：</strong></h2>
+<ol>
+<li>爬虫基于scrapy+redis架构进行开发、优化。</li>
+<li>爬虫支持断点续爬。</li>
+<li>非常简易地，便可实现分布式扩展。</li>
+<li>使用Redis的“位”进行去重，1G的内存可满足80亿个用户ID的瞬间去重。</li>
+<li>将种子优化到不足40个字符，大大降低了Redis的内存消耗，也提高了各子爬虫从Redis取种子的速度。</li>
+<li>维护了一个Cookie池，各子机器共用一个Cookie池，断点续爬不会重复获取Cookie，当某个Cookie失效时会自动更新。</li>
+</ol>
+<p>注：本项目用代码提交请求进行登录，不会遇到验证码。但是有个情况：如果一次性获取几十个Cookie，新浪会检测到你的IP异常（大约多久会被检测出来？以前是一分钟左右，现在好像几十秒，我们就用这几十秒登陆完所有账号，放心 代码登录很快的），大约十个小时后会给你的IP恢复正常。IP被检测为异常会怎样？不会影响爬虫的抓取，只是你再登录账号时会被要求输入验证码，日志如<code>[Sina_spider3.cookies] WARNING: Failed!( Reason:为了您的帐号安全，请输入验证码 )</code>。
+如果我的账号还没登录完就出现这种情况怎么办？可以先将爬虫停了，机器换个IP继续获取Cookie，放心 已获取到Cookie的账号会自动跳过。当然如果你不喜欢受这个限制，可以用打码平台或着自己写个程序把验证码搞定。其实只是第一次启动爬虫才是需要获取那么多Cookie，之后只有等哪个Cookie失效了才会去更新。
+<br/><br/></p>
+<h2><strong>数据说明：</strong></h2>
+<p><strong>用户发表的微博：</strong>
+<img alt="新浪微博爬虫" src="http://img.blog.csdn.net/20161201005007048" /></p>
+<div class="highlight"><pre><span></span>_id :  用户ID-微博ID
+ID :  用户ID
+Content :  微博内容
+PubTime :  发表时间
+Co_oridinates :  定位坐标
+Tools :  发表工具/平台
+Like :  点赞数
+Comment :  评论数
+Transfer :  转载数
+</pre></div>
+
+
+<hr />
+<p><strong>用户的个人信息：</strong>
+<img alt="新浪微博个人信息" src="http://img.blog.csdn.net/20161201005024673" /></p>
+<div class="highlight"><pre><span></span>_id: 用户ID
+NickName: 昵称
+Gender: 性别
+Province: 所在省
+City: 所在城市
+BriefIntroduction: 简介
+Birthday: 生日
+Num_Tweets: 微博数
+Num_Follows: 关注数
+Num_Fans: 粉丝数
+SexOrientation: 性取向
+Sentiment: 感情状况
+VIPlevel: 会员等级
+Authentication: 认证
+URL: 首页链接
+</pre></div>
+
+
+<p><br/></p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-wang-luo-pa-chong.html">Python 网络爬虫</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/pa-chong.html">爬虫</a>,      <a href="https://pycntech.github.io/tag/xin-lang-wei-bo.html">新浪微博</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

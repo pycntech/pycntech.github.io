@@ -19,7 +19,7 @@
 
   <title>
     PyCN技术评论
-&ndash; 作者  </title>
+&ndash; 分类: Python 云计算  </title>
 
 </head>
 
@@ -44,17 +44,33 @@
     <header>
       <p>
       <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+&gt; 分类: Python 云计算
       </p>
     </header>
 
 <article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/OpenStack源码分析之RabbitMQ（一）-ZZR.html">OpenStack源码分析之RabbitMQ（一）</a></h1>
+  </div>
   <div class="article_text">
-    <ul>
-      <li><a href="https://pycntech.github.io/author/pythonzhong-wen-she-qu.html">Python中文社区</a> (15)</li>
-    </ul>
+    <p>在Openstack中，各个组件内部使用消息队列进行通信，其中，RabbitMQ是常用的一种开源消息代理软件。这里作一个简要介绍。</p>
+  </div>
+</article>
+<hr />
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/OpenStack源码分析之RabbitMQ（二）-ZZR.html">OpenStack源码分析之RabbitMQ（二）</a></h1>
+  </div>
+  <div class="article_text">
+    <p>在上一篇中，task_queue所解决的问题是，一个message只能被一种consumer所接收。现在我们有了新的需求，我们需要一个日志系统，我们希望有两种consumer，一种consumer将日志输出到屏幕，另一种consumer写到disk。为了实现这个目的，我们希望message被投到两个queue中，交给不同的consumer进行处理。</p>
   </div>
 </article>
 
+<footer>
+<div id="paginator">
+
+</div>
+</footer>
 
     <div id="ending_message">
       <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>

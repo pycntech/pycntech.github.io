@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, OpenStack">
+
+  <title>
+    PyCN技术评论
+&ndash; OpenStack源码分析之RabbitMQ（二）  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/OpenStack源码分析之RabbitMQ（二）-ZZR.html">OpenStack源码分析之RabbitMQ（二）</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：ZZR</h4>
+<h2>fanout exchange</h2>
+<p>在上一篇中，task_queue所解决的问题是，一个message只能被一种consumer所接收。现在我们有了新的需求，我们需要一个日志系统，我们希望有两种consumer，一种consumer将日志输出到屏幕，另一种consumer写到disk。为了实现这个目的，我们希望message被投到两个queue中，交给不同的consumer进行处理。如下所示：</p>
+<p><img alt="two-consumer" src="index_files/two-consumer.png" /></p>
+<p>对于producer，不再指定哪一个queue来接收消息，而是哪一个exchange来接收消息。exchange不保存信息，如果没有queue绑定在这个exchange上的话，消息就丢失了。代码如下：</p>
+<div class="highlight"><pre><span></span><span class="c1"># filename: emit_log.py</span>
+<span class="c1"># !/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+    <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;fanout&#39;</span><span class="p">)</span>
+<span class="n">message</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="ow">or</span> <span class="s2">&quot;info: Hello World!&quot;</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;logs&#39;</span><span class="p">,</span>
+                      <span class="n">routing_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                      <span class="n">body</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] Sent </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">message</span><span class="p">)</span>
+<span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+
+<p>对于consumer，自己创建临时queue（<code>exclusive=True</code>，当这个consumer终止，这个queue就销毁），将这个queue接到exchange上，然后通过这个queue接收exchange发出的消息：</p>
+<div class="highlight"><pre><span></span><span class="c1"># filename: receive_logs.py</span>
+<span class="c1"># !/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+
+<span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span> <span class="n">body</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">body</span><span class="p">)</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+    <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;fanout&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">queue_declare</span><span class="p">(</span><span class="n">exclusive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">queue_name</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">queue</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">queue_bind</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;logs&#39;</span><span class="p">,</span>
+                   <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39; [*] Waiting for logs. To exit press CTRL+C&#39;</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_consume</span><span class="p">(</span><span class="n">callback</span><span class="p">,</span>
+                      <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span>
+                      <span class="n">no_ack</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">start_consuming</span><span class="p">()</span>
+</pre></div>
+
+
+<p>如下图所示，每一个consumer都建了自己的临时queue，并与exchange进行了绑定：
+<img alt="fanout-exchange-list-queues" src="index_files/fanout-exchange-list-queues.png" /></p>
+<h2>direct exchange</h2>
+<p>上面的例子中，queue_bind()的时候我们没有指定routing_key（为了避免混淆，后续将其称为binding_key）。binding_key的功能与exchange的类型有关。对于fanout exchange而言，binding_key没有意义。对于direct exchange而言，如下图所示，只有消息的routing_type与queue的binding_key相同时才会发送到该queue：
+<img alt="direct-exchange" src="index_files/direct-exchange.png" /></p>
+<p>可以指定相同的binding_key，如下图所示：
+<img alt="direct-exchange-multiple" src="index_files/direct-exchange-multiple.png" /></p>
+<p>借此，我们可以将日志系统改造为以下模式，不同的consumer只接收特定类型的日志信息：
+<img alt="python-four" src="index_files/python-four.png" /></p>
+<p>完整代码如下：</p>
+<div class="highlight"><pre><span></span><span class="c1"># filename: emit_log.py</span>
+<span class="c1">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;direct_logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;direct&#39;</span><span class="p">)</span>
+
+<span class="n">severity</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s1">&#39;info&#39;</span>
+<span class="n">message</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span> <span class="ow">or</span> <span class="s1">&#39;Hello World!&#39;</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;direct_logs&#39;</span><span class="p">,</span>
+                      <span class="n">routing_key</span><span class="o">=</span><span class="n">severity</span><span class="p">,</span>
+                      <span class="n">body</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] Sent </span><span class="si">%r</span><span class="s2">:</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">severity</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+<span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span></span><span class="c1"># filename: receiver_logs.py</span>
+<span class="c1">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span> <span class="n">body</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] </span><span class="si">%r</span><span class="s2">:</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="o">.</span><span class="n">routing_key</span><span class="p">,</span> <span class="n">body</span><span class="p">))</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+    <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;direct_logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;direct&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">queue_declare</span><span class="p">(</span><span class="n">exclusive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">queue_name</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">queue</span>
+
+<span class="n">severities</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">severities</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Usage: </span><span class="si">%s</span><span class="s2"> [info] [warning] [error]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">severity</span> <span class="ow">in</span> <span class="n">severities</span><span class="p">:</span>
+    <span class="n">channel</span><span class="o">.</span><span class="n">queue_bind</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;direct_logs&#39;</span><span class="p">,</span>
+                       <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span>
+                       <span class="n">routing_key</span><span class="o">=</span><span class="n">severity</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39; [*] Waiting for logs. To exit press CTRL+C&#39;</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_consume</span><span class="p">(</span><span class="n">callback</span><span class="p">,</span>
+                      <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span>
+                      <span class="n">no_ack</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">start_consuming</span><span class="p">()</span>
+</pre></div>
+
+
+<h2>topic exchange</h2>
+<p>topic exchange与direct exchange类似，只是它允许binding_key使用特殊字符（注意，特殊字符代表的是单词，不是字母）：
+- <code>*</code>：代表一个单词
+- <code>#</code>：代表零个或多个单词</p>
+<p>比如下面这个例子。routing_key定义为<code>"&lt;celerity&gt;.&lt;colour&gt;.&lt;species&gt;"</code>。举几个routing_key匹配的例子：
+- quick.orange.rabbit：一，二
+- lazy.orange.elephant：一，二
+- quick.orange.fox：一
+- lazy.brown.fox：三
+- lazy.pink.rabbit：二，三（但只发一次，因为二和三是同一个队列）
+- quick.brown.fox：无，舍弃
+- orange：无，舍弃
+- quick.orange.male.rabbit：无，舍弃
+- lazy.orange.male.rabbit：三</p>
+<p><img alt="python-five" src="index_files/python-five.png" /></p>
+<p>当binding_key不使用这些特殊字符时，topic exchange其实就是direct exchange；当binding_key使用<code>#</code>时，topic exchange其实就是fanout exchange，也就是所有消息都接收。</p>
+<p>一些极端的例子：
+binding_key：<code>*</code>，routing_key：空串。不匹配。
+binding_key：<code>#.*</code>，routing_key：<code>..</code>。匹配。
+binding_key：<code>#.*</code>，routing_key：apple。匹配。</p>
+<p>完整代码：</p>
+<div class="highlight"><pre><span></span><span class="c1"># filename: emit_log_topic.py</span>
+<span class="c1">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;topic_logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;topic&#39;</span><span class="p">)</span>
+
+<span class="n">routing_key</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s1">&#39;anonymous.info&#39;</span>
+<span class="n">message</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span> <span class="ow">or</span> <span class="s1">&#39;Hello World!&#39;</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;topic_logs&#39;</span><span class="p">,</span>
+                      <span class="n">routing_key</span><span class="o">=</span><span class="n">routing_key</span><span class="p">,</span>
+                      <span class="n">body</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] Sent </span><span class="si">%r</span><span class="s2">:</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">routing_key</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+<span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+
+<div class="highlight"><pre><span></span><span class="c1"># filename: receive_logs_topic.py</span>
+<span class="c1">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">))</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;topic_logs&#39;</span><span class="p">,</span>
+                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;topic&#39;</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">queue_declare</span><span class="p">(</span><span class="n">exclusive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">queue_name</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">queue</span>
+
+<span class="n">binding_keys</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">binding_keys</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Usage: </span><span class="si">%s</span><span class="s2"> [binding_key]...</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">binding_key</span> <span class="ow">in</span> <span class="n">binding_keys</span><span class="p">:</span>
+    <span class="n">channel</span><span class="o">.</span><span class="n">queue_bind</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;topic_logs&#39;</span><span class="p">,</span>
+                       <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span>
+                       <span class="n">routing_key</span><span class="o">=</span><span class="n">binding_key</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39; [*] Waiting for logs. To exit press CTRL+C&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span> <span class="n">body</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot; [x] </span><span class="si">%r</span><span class="s2">:</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="o">.</span><span class="n">routing_key</span><span class="p">,</span> <span class="n">body</span><span class="p">))</span>
+
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_consume</span><span class="p">(</span><span class="n">callback</span><span class="p">,</span>
+                      <span class="n">queue</span><span class="o">=</span><span class="n">queue_name</span><span class="p">,</span>
+                      <span class="n">no_ack</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">channel</span><span class="o">.</span><span class="n">start_consuming</span><span class="p">()</span>
+</pre></div>
+
+
+<h2>总结</h2>
+<p>在上一篇中:</p>
+<blockquote>
+<p>再回顾一下上面的代码。首先明确，这种情况使用的是默认exchange。对于producer，它将消息交给exchange，然后exchange通过routing key来判断要将消息交到哪个queue。实际上相当于将消息直接发送到queue中。而consumer直接指定queue的名字，也就是它直接绑定到这个queue。这个过程中exchange其实没什么存在感。</p>
+</blockquote>
+<p>而这一篇，实际上producer只认exchange。它只负责将消息交给exchange。consumer自己搭建queue，将queue绑定到它感兴趣的exchange上。exchange决定它以什么样的形式提供服务，是fanous还是direct。</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-yun-ji-suan.html">Python 云计算</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/openstack.html">OpenStack</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

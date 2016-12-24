@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, GIS, 可视化">
+
+  <title>
+    PyCN技术评论
+&ndash; 从pandas到geopandas  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/从pandas到geopandas-时空Drei.html">从pandas到geopandas</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：时空Drei</h4>
+<h3>pandas简介</h3>
+<p><a href="http://pandas.pydata.org/">Pandas</a>是Python的一个结构化数据分析的利器。其中，DataFrame是比较常用的处理数据的对象，类似于一个数据库里的table或者excel中的worksheet，可以非常方便的对二维数据读取（xls，csv，hdf等）、增删改查、基本绘图等。pandas应该是用python做数据分析必不可少的工具。</p>
+<p>看一个dataframe的实例</p>
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-9212ae85e4a7e93b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<h3>geopandas简介</h3>
+<p>DataFrame相当于GIS数据中的一张属性表，为了将pandas的特性用到空间数据，就有了geopandas。其目标是使得在python中操作地理数据更方便。</p>
+<blockquote>
+<p>Pandas is an open source project to make working with geospatial data in python easier. GeoPandas extends the datatypes used by <a href="http://pandas.pydata.org/">pandas</a> to allow spatial operations on geometric types. Geometric operations are performed by <a href="http://toblerity.github.io/shapely">shapely</a>. Geopandas further depends on <a href="http://toblerity.github.io/fiona">fiona</a> for file access and <a href="https://pypi.python.org/pypi/descartes">descartes</a> and <a href="http://matplotlib.org/">matplotlib</a> for plotting.</p>
+</blockquote>
+<p>geopandas结合了pandas和shapely的功能，扩展了pandas在空间数据操作方面的能力，从而使得你可以轻松的用python实现空间数据分析。</p>
+<p>看一个geodataframe的实例</p>
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-6366a61afab2c02b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" />
+与dataframe相对，直观的区别是多了一个geometry的字段。</p>
+<h3>安装</h3>
+<div class="highlight"><pre><span></span>pip install geopandas
+# or
+conda install -c conda-forge geopandas
+</pre></div>
+
+
+<h3>官网示例</h3>
+<p>先直接照搬一个官网上的例子</p>
+<div class="highlight"><pre><span></span>p1 = Polygon([(0, 0), (1, 0), (1, 1)])
+p2 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+p3 = Polygon([(2, 0), (3, 0), (3, 1), (2, 1)])
+g = gpd.GeoSeries([p1, p2, p3])
+g.plot()
+</pre></div>
+
+
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-4ce5bf4e7873c0db.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<p>可以非常方便的计算面积和缓冲区</p>
+<div class="highlight"><pre><span></span>print g.area
+g.buffer(0.5).plot()
+</pre></div>
+
+
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-fc7068041bd50d38.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" />
+还有其他空间数据分析的功能，有兴趣可以去官网了解下。</p>
+<h3>示例2. 构建geodataframe对象</h3>
+<p>gepandas提供了多个读取矢量空间数据的接口，支持包括shapefile，geojson等。也支持直接从已有的dataframe对象生成geodataframe，示例如下：</p>
+<div class="highlight"><pre><span></span>df = pd.DataFrame(np.random.randn(50, 3),columns=[&#39;X&#39;, &#39;Y&#39;, &#39;Z&#39;])
+geom = [shapely.geometry.Point(xy) for xy in zip(df.X, df.Y)]
+gdf = geopandas.GeoDataFrame(df, geometry=geom)
+print type(gdf)
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>&lt;class &#39;geopandas.geodataframe.GeoDataFrame&#39;&gt;
+</pre></div>
+
+
+<h3>示例3. osm路网</h3>
+<p>下面这个例子，首先获取一个城市（如青岛）的空间范围，根据这个范围下载openstreetmap的道路数据存入geodataframe对象，然后绘制出来。</p>
+<h5>1. 获取空间范围</h5>
+<p>这里用之前提到的geocoder这个工具，网友也提到这些地理编码获取的坐标并不准确，我们暂且先不考虑精度的问题。</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">geocoder</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Polygon</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">arcgis</span><span class="p">(</span><span class="s2">u&quot;青岛&quot;</span><span class="p">)</span>
+<span class="n">min_lat</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">bbox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;southwest&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">min_lon</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">bbox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;southwest&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">max_lat</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">bbox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;northeast&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">max_lon</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">bbox</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;northeast&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="n">boundary</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="n">min_lon</span><span class="p">,</span> <span class="n">min_lat</span><span class="p">),(</span><span class="n">min_lon</span><span class="p">,</span><span class="n">max_lat</span><span class="p">),(</span><span class="n">max_lon</span><span class="p">,</span><span class="n">max_lat</span><span class="p">),</span> <span class="p">(</span><span class="n">max_lon</span><span class="p">,</span> <span class="n">min_lat</span><span class="p">)])</span>
+</pre></div>
+
+
+<p>这样获取到的青岛市的空间范围（外接矩形）为</p>
+<div class="highlight"><pre><span></span>{&#39;northeast&#39;: [36.209606, 120.482939], &#39;southwest&#39;: [35.987606, 120.260939]}
+</pre></div>
+
+
+<p>##### 2. 下载osm数据</p>
+<p>这里用到geopandas_osm这个工具，安装命令为</p>
+<div class="highlight"><pre><span></span>pip install git+https://github.com/jwass/geopandas_osm.git
+</pre></div>
+
+
+<p>将空间范围的polygon对象作为参数即可，可以查看一下对象类型和投影参数：</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">geopandas_osm.osm</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">geopandas_osm</span><span class="o">.</span><span class="n">osm</span><span class="o">.</span><span class="n">query_osm</span><span class="p">(</span><span class="s1">&#39;way&#39;</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">recurse</span><span class="o">=</span><span class="s1">&#39;down&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;highway&#39;</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">df</span><span class="o">.</span><span class="n">crs</span>
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>&lt;class &#39;geopandas.geodataframe.GeoDataFrame&#39;&gt;
+{&#39;init&#39;: &#39;epsg:4326&#39;, &#39;no_defs&#39;: True}
+</pre></div>
+
+
+<p>直接获取到的osm数据比较乱，做进一步筛选：</p>
+<div class="highlight"><pre><span></span>way = df[df.type == &#39;LineString&#39;][[&#39;highway&#39;, &#39;name&#39;, &#39;geometry&#39;]]
+way.head()
+</pre></div>
+
+
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-bafc23bc95832842.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<p>可以计算道路的长度，这里只是示意。直接计算length并不对，应该先投影到平面坐标系。</p>
+<div class="highlight"><pre><span></span>df.ix[0].geometry.length
+</pre></div>
+
+
+<p>输出为</p>
+<div class="highlight"><pre><span></span>0.0014679943869086182
+</pre></div>
+
+
+<h5>3. 绘制路网</h5>
+<p>可以直接用plot命令，绘制出来：</p>
+<div class="highlight"><pre><span></span>way.plot(column=&quot;name&quot;,colormap=cm.coolwarm_r)
+</pre></div>
+
+
+<p><img alt="" src="http://upload-images.jianshu.io/upload_images/3129325-7833bb99716733a1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+<h3>代码下载</h3>
+<p>如果对本文中的代码(.ipynb文件)感兴趣，百度网盘链接：http://pan.baidu.com/s/1mh8FghE， 密码请在关注个人微信公众号<code>stdrei</code>后，输入口令‘pandas2geo’自动获取。</p>
+<p><img alt="欢迎关注微信公众号" src="http://upload-images.jianshu.io/upload_images/3129325-61b45511d7d60be9.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" /></p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-shu-ju-fen-xi.html">Python 数据分析</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/gis.html">GIS</a>,      <a href="https://pycntech.github.io/tag/ke-shi-hua.html">可视化</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>

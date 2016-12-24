@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="cn">
+
+<head>
+  <!-- ## for client-side less
+  <link rel="stylesheet/less" type="text/css" href="https://pycntech.github.io/theme/css/style.less">
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/less.js/1.7.3/less.min.js" type="text/javascript"></script>
+  -->
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://pycntech.github.io/theme/css/pygments.css">
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=PT+Sans|PT+Serif|PT+Mono">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="PyCN技术评论">
+  <meta name="description" content="Posts and writings by PyCN技术评论">
+
+
+<meta name="keywords" content="Python, yield">
+
+  <title>
+    PyCN技术评论
+&ndash; 关于yield的二三事  </title>
+
+</head>
+
+<body>
+  <aside>
+    <div id="user_meta">
+      <a href="https://pycntech.github.io">
+        <img src="https://pycntech.github.io/theme/images/logo.png" alt="logo" height="200" width="200">
+      </a>
+      <h2><a href="https://pycntech.github.io">PyCN技术评论</a></h2>
+      <p></p>
+      <ul>
+        <li><a href="https://github.com/PyCN/PTR" target="_blank">Py字幕组</a></li>
+        <li><a href="https://github.com/PyCN" target="_blank">PyCN Github</a></li>
+        <li><a href="https://python-chinese.github.io/" target="_blank">Python中文社区</a></li>
+        <li><a href="https://github.com/pycntech/pycntech.github.io" target="_blank">关于本站</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <p>
+      <a href="https://pycntech.github.io/index.html">首页</a> &brvbar; <a href="https://pycntech.github.io/archives.html">归档</a>
+      </p>
+    </header>
+
+<article>
+  <div class="article_title">
+    <h1><a href="https://pycntech.github.io/关于yield的二三事-Manjusaka.html">关于yield的二三事</a></h1>
+  </div>
+  <div class="article_text">
+    <h4>作者：Manjusaka</h4>
+<blockquote>
+<ul>
+<li>文章来源：itsCoder 的 <a href="https://github.com/itsCoder/weeklyblog">WeeklyBolg</a> 项目</li>
+<li>itsCoder主页：<a href="http://itscoder.com/">http://itscoder.com/</a></li>
+<li>作者：<a href="https://github.com/Zheaoli">Manjusaka</a></li>
+<li>审阅者：<a href="https://github.com/wuchangfeng">allenwu</a>,<a href="https://github.com/brucezz">Brucezz</a></li>
+</ul>
+</blockquote>
+<h2>写在前面的话</h2>
+<p>本来想这周继续写写 <strong>Flask</strong> 那点破事儿的，但是想了想决定换换口味，来聊聊很不容易理解但是很重要的 <strong>Python</strong> 中的生成器和协程。
+<!-- more --></p>
+<h2>Generators 科普</h2>
+<p>我猜大家对于生成器肯定并不陌生，但是为了能让我愉快的继续装逼，我们还是用点篇幅讲一下什么是生成器吧。
+比如在 Python 里，我们想生成一个范围 (1,100000) 的一个 list，于是我们无脑写了如下的代码出来</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generateList</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+    <span class="n">tempList</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+        <span class="n">tempList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tempList</span>
+</pre></div>
+
+
+<blockquote>
+<p>注1：这里有同学提出了为什么我们不直接返回 <code>range(start,stop)</code>，Nice question，这里涉及到一个基础问题，<code>range</code> 的机制究竟是怎样的。这就要分版本而论了，在 Python 2.x 的版本中，<code>range(start,stop)</code> 其实本质上是预先生成一个 <code>list</code> ,而 <code>list</code> 对象是一个 <strong>Iterator</strong> ，因此可以被 <code>for</code> 语句所使用。
+<img alt="Python 2.x 中的 range" src="https://cloud.githubusercontent.com/assets/7054676/18607847/90092cf6-7d0b-11e6-9963-8f59f8ebbb28.png" />
+然后在 Python 2.x 中还有一个语句叫做 <code>xrange</code> ，其生成的是一个 <strong>Generator</strong> 对象。
+<img alt="Python 2.x 中的 xrange" src="https://cloud.githubusercontent.com/assets/7054676/18607857/cf72561a-7d0b-11e6-9084-bc8a02404ed1.png" />
+在 Python 3 中事情发生了一点变化，可能社区觉得 <code>range</code> 和 <code>xrange</code> 分裂太过蛋疼，于是将其合并，于是现在在 Python 3 中，取消了 <code>xrange</code> 的语法糖，然后 <code>range</code> 的机制也变成生成一个 <strong>Generator</strong> 而不是 <code>list</code>
+<img alt="Python 3 中的 range" src="https://cloud.githubusercontent.com/assets/7054676/18607878/6fc147f2-7d0c-11e6-9384-d1dd748ffb5d.png" /></p>
+</blockquote>
+<p>但是大家考虑过一个问题么，如果我们想生成数据量非常大，预先生成数据的行为无疑是很不明智的，这样会耗费大量的内存。于是 Python 给我们提供了一种新的姿势，<strong>Generator</strong> (生成器)</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generateList1</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">i</span>
+
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">=</span><span class="n">generateList1</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+
+
+<p>是的，<strong>Generator</strong> 其中一个特性就是不是一次性生成数据，而是生成一个可迭代的对象，在迭代时，根据我们所写的逻辑来控制其启动时机。</p>
+<h2>Generator 深入</h2>
+<p>这里可能有一个问题，大家肯定想问 <strong>Python</strong> 开发者们不可能为了这一种使用场景而去单独创建一个 <strong>Generator</strong> 机制吧，那么我们 <strong>Generator</strong> 还有其余的使用场景么。当然，请看标题，对了嘛，<strong>Generator</strong> 另一个很大作用可以说就是当做协程使用。不过在这之前，我们要去深入的了解下 <strong>Generator</strong> 才能方便我们后面的讲解。</p>
+<h3>关于 Generator 中的内建方法</h3>
+<h4>关于 Python 中可迭代对象的一点背景知识</h4>
+<p>首先，我们来看看 Python 中的迭代过程。
+在 Python 中迭代有两个概念，一个是 <strong>Iterable</strong> ，另一个是 <strong>Iterator</strong> 。让我们分别来看看
+第N次首先，<strong>Iterable</strong> 近似的可以理解成为一个协议，判断一个 <strong>Object</strong> 是否是 <strong>Iterable</strong> 的方法就是看其实现了 <strong><strong>iter</strong></strong> 与否，如果实现了 <strong><strong>iter</strong></strong> ，那么这便可以认为是一个 <strong>Iterable</strong> 对象。空谈误国，实干兴邦，让我们直接来看一段代码理解下</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Counter</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">=</span> <span class="n">low</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="n">high</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># Python 3: def __next__(self)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">high</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current</span> <span class="o">-</span> <span class="mi">1</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">a</span><span class="o">=</span><span class="n">Counter</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">a</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+</pre></div>
+
+
+<p>好了，让我们来看看上面这段代码里发生了什么，首先 <code>for</code> 语句的引用首先去判断迭代的是 <strong>Iterable</strong> 对象还是 <strong>Iterator</strong> 对象，如果是实现了 <code>__iter__</code> 方法的对象，那么就是一个 <strong>Iterable</strong> 对象，<code>for</code> 循环首先调用对象的 <code>__iter__</code> 方法来获取一个 <strong>Iterator</strong> 对象。那么什么是 <strong>Iterator</strong> 对象呢，这里可以近似的理解为是实现了 <strong>next()</strong> 方法（注：在Python3中是 <strong><strong>next</strong></strong> 方法)。</p>
+<p>OK，让我们继续回到刚刚说到的那里，在上面的代码中 <code>for</code> 语句首先判断是一个 <strong>Iterable</strong> 对象还是 <strong>Iterator</strong> 对象，如果是 <strong>Iterable</strong> 对象那么调用其 <strong><strong>iter</strong></strong> 方法来获取一个 <strong>Iterator</strong> 对象，接着 <code>for</code> 循环会调用 <strong>Iterator</strong> 对象中的 <code>next()</code> （注：Python3 里是 <code>__next__</code>)方法来进行迭代，直到迭代过程结束抛出 <code>StopIteration</code> 异常。</p>
+<h4>好了，来聊聊 <strong>Generator</strong> 吧</h4>
+<p>让我们先看看前面那段代码吧：</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generateList1</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">i</span>
+
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">=</span><span class="n">generateList1</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">generateList1</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+
+
+<p>首先我们要确定一点的是 <strong>Generator</strong> 其实也是一个 <strong>Iterator</strong> 对象。OK 让我们来看看上面这段代码，首先 <code>for</code> 确定 <code>generateList1</code> 是一个 <strong>Iterator</strong> 对象，然后开始调用 <code>next()</code> 方法进行进一步迭代。OK 此时你肯定想问这里面 <code>next()</code> 方法是怎样让 <code>generateList1</code> 进一步往下迭代的呢？答案在于 <strong>Generator</strong> 的内建 <code>send()</code> 方法。我们还是来看一段代码。</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generateList1</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="n">stop</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">i</span>
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">a</span><span class="o">=</span><span class="n">generateList1</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">None</span><span class="p">))</span>
+</pre></div>
+
+
+<p>这里我们应该输出什么？答案就是 <code>0,1,2,3,4</code> ，结果上和我们用 <code>for</code> 循环进行运算的结果是不是一样。好了，我们现在可以得出一个结论就是</p>
+<blockquote>
+<p><strong>Generator</strong> 迭代的本质就是通过内建的 <code>next()</code> 或 <code>__next__()</code> 方法来调用内建的 <code>send()</code> 方法。</p>
+</blockquote>
+<h3>继续吐槽 <strong>Generator</strong> 的内建方法</h3>
+<p>前面我们提到一个结论</p>
+<blockquote>
+<p><strong>Generator</strong> 迭代的本质就是通过内建的 <code>next()</code> 或 <code>__next__()</code> 方法来调用内建的 <code>send()</code> 方法。</p>
+</blockquote>
+<p>现在我们来看个例子：</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">countdown</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s2">&quot;Counting down from&quot;</span><span class="p">,</span> <span class="n">n</span>
+    <span class="k">while</span> <span class="n">n</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">newvalue</span> <span class="o">=</span> <span class="p">(</span><span class="k">yield</span> <span class="n">n</span><span class="p">)</span>
+        <span class="c1"># If a new value got sent in, reset n with it</span>
+        <span class="k">if</span> <span class="n">newvalue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">newvalue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">-=</span> <span class="mi">1</span>
+
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">countdown</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">c</span><span class="p">:</span>
+        <span class="k">print</span> <span class="n">x</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+
+
+<p>好了这段代码的输出应该是什么？
+答案是 <code>[5，2，1，0]</code> ，是不是很迷惑？别急，我们先来看看这段代码的运行流程</p>
+<p><img alt="代码运行流程" src="https://cloud.githubusercontent.com/assets/7054676/18417878/b17e6636-786e-11e6-9182-0e7a69b5611f.png" /></p>
+<p>简而言之就是，当我们调用 <code>send()</code> 函数的时候，我们 <code>send(x)</code> 的值会发送给 <code>newvalue</code> 向下继续执行直到遇到下一次 <code>yield</code> 的出现，然后返回值作为一个过程的结束。然后我们的 <strong>Generator</strong> 静静的沉睡在内存中，等待下一次的 <code>send</code> 来唤醒它。</p>
+<blockquote>
+<p>注2：有同志问：“这里没想明白，c.send(3) 是 相当于 yield n 返回了个 3 给 newvalue ?”，好的，nice question，其实这个问题我们看前面之前的代码运行图就知道， <code>c.send(3)</code> 首先，将 <code>3</code> 赋值给 <code>newvalue</code> ，然后程序运行剩下的代码，直到遇到下一个 <code>yield</code> 为止，那么在这里，我们运行剩下完代码，在遇到 <code>yiled n</code> 之前，将 <code>n</code> 的值已经改变为 <code>3</code> ,接着，<code>yield n</code> 即约等于 <code>return 3</code>。接着 <code>countdown</code> 这个 <strong>Generator</strong> 将所有变量的状态冻结，然后静静的呆在内存中，等待下一次的 <code>next</code> 或 <code>__next__()</code> 方法或者是 <code>send()</code> 方法的唤醒。</p>
+<p>小贴士：我们如果直接调用 <code>send()</code> 的话，第一次请务必 <code>send(None)</code> 只有这样一个 <strong>Generator</strong> 才算是真正被激活了。我们才能进行下一步操作。</p>
+</blockquote>
+<h2>说说关于协程</h2>
+<p>首先关于协程的定义，我们来看一段 wiki</p>
+<blockquote>
+<p>Coroutines are computer program components that generalize subroutines for nonpreemptive multitasking, by allowing multiple entry points for suspending and resuming execution at certain locations. Coroutines are well-suited for implementing more familiar program components such as cooperative tasks, exceptions, event loop, iterators, infinite lists and pipes.
+According to Donald Knuth, the term coroutine was coined by Melvin Conway in 1958, after he applied it to construction of an assembly program.[1] The first published explanation of the coroutine appeared later, in 1963.</p>
+</blockquote>
+<p>简而言之，协程是比线程更为轻量的一种模型，我们可以自行控制启动与停止的时机。在 <strong>Python</strong> 中其实没有专门针对协程的这个概念，社区一般而言直接将 <strong>Generator</strong> 作为一种特殊的协程看待，想想，我们可以用 <code>next</code> 或 <code>__next__()</code> 方法或者是 <code>send()</code> 方法唤醒我们的 <strong>Generator</strong> ，在运行完我们所规定的代码后， <strong>Generator</strong> 返回并将其所有状态冻结。这是不是很让我们 Excited 呢！！</p>
+<h2>关于 <strong>Generator</strong> 的一点课后作业</h2>
+<p>现在我们要后序遍历二叉树，我知道看这篇文章神犇们都能无脑写出来的，让我们看看代码先：</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left</span> <span class="o">=</span> <span class="n">left</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right</span> <span class="o">=</span> <span class="n">right</span>
+
+<span class="k">def</span> <span class="nf">visit_post</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">visit_post</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">visit_post</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">val</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">visit_post</span><span class="p">(</span><span class="n">node</span><span class="p">)))</span>
+</pre></div>
+
+
+<p>但是，我们知道递归深度太深的话，我们要么爆栈要么 py 交易失败，OK ，<strong>Generator</strong> 大法好，把你码农平安保，还是直接看代码：</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visit_post</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">node</span><span class="o">.</span><span class="n">left</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">node</span><span class="o">.</span><span class="n">right</span>
+    <span class="k">yield</span> <span class="n">node</span><span class="o">.</span><span class="n">val</span>
+
+<span class="k">def</span> <span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">visit_method</span><span class="p">):</span>
+    <span class="n">stack</span> <span class="o">=</span> <span class="p">[</span><span class="n">visit_method</span><span class="p">(</span><span class="n">node</span><span class="p">)]</span>
+    <span class="k">while</span> <span class="n">stack</span><span class="p">:</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="n">stack</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">yielded</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">last</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">yielded</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
+                <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">visit_method</span><span class="p">(</span><span class="n">yielded</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">yielded</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">yielded</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+    <span class="n">visit_generator</span> <span class="o">=</span> <span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">visit_method</span><span class="o">=</span><span class="n">visit_post</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">visit_generator</span><span class="p">))</span>
+</pre></div>
+
+
+<p>看起来很复杂是不是？没事当做课后作业，大家可以在评论里给我留言，我们一起进行一下 py 交易吧~</p>
+<h2>参考链接</h2>
+<p>1.<a href="http://www.oschina.net/translate/improve-your-python-yield-and-generators-explained">提高你的Python: 解释‘yield’和‘Generators（生成器）’</a>
+2.<a href="http://www.jianshu.com/p/b37a92a5ada0">yield大法好</a>
+3.<a href="http://my.oschina.net/1123581321/blog/160560">http://my.oschina.net/1123581321/blog/160560</a>
+4.<a href="https://www.zhihu.com/question/44015086">python的迭代器为什么一定要实现__iter__方法</a>(关于迭代器那离，为了便于理解，我简化了一些东西，具体可以参看这个问题的高票答案)</p>
+  </div>
+  <div class="article_meta">
+    <p>发布于: 六 24 十二月 2016</p>
+    <p>分类: <a href="https://pycntech.github.io/category/python-ji-chu-zhi-shi.html">Python 基础知识</a>
+ &ndash; 标签:
+      <a href="https://pycntech.github.io/tag/python.html">Python</a>,      <a href="https://pycntech.github.io/tag/yield.html">yield</a>    </p>
+  </div>
+
+
+</article>
+
+
+    <div id="ending_message">
+      <p>&copy; PyCN技术评论. Built using <a href="http://getpelican.com" target="_blank">Pelican</a>. Theme by Giulio Fidente on <a href="https://github.com/gfidente/pelican-svbhack" target="_blank">github</a>. </p>
+    </div>
+  </main>
+</body>
+</html>
